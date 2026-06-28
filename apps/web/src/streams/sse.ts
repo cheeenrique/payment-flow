@@ -20,6 +20,7 @@ const RECONNECT_BASE_MS = 1_000
 export function createEventStream(
   token: string,
   handlers: EventHandlerMap,
+  onRawEvent?: (event: SseEvent) => void,
 ): EventStreamHandle {
   const baseUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3100'
   let attempts = 0
@@ -35,6 +36,7 @@ export function createEventStream(
     source.onmessage = (event: MessageEvent): void => {
       try {
         const data = JSON.parse(event.data) as SseEvent
+        onRawEvent?.(data)
         dispatch(data, handlers)
       } catch {
         // Mensagem malformada — ignora sem derrubar a conexão
