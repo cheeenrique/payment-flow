@@ -56,9 +56,14 @@ export interface TimelineEvent {
   timestamp: string
 }
 
+/** Severidade/categoria visual de uma notificação */
+export type NotificationType = 'info' | 'success' | 'warning' | 'error'
+
 /** Notificação destinada ao usuário */
 export interface Notification {
   id: string
+  type: NotificationType
+  title?: string
   message: string
   read: boolean
   createdAt: string

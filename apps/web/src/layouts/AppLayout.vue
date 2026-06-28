@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
+import NotificationHost from '@/components/notifications/NotificationHost.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -55,5 +56,7 @@ async function handleLogout(): Promise<void> {
         <RouterView />
       </main>
     </div>
+
+    <NotificationHost />
   </div>
 </template>
