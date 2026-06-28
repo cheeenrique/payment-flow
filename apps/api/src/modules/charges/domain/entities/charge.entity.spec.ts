@@ -163,3 +163,108 @@ describe('Charge.cancel', () => {
     expect(charge.status).toBe(ChargeStatus.PENDING);
   });
 });
+
+describe('Charge.canExpire', () => {
+  it('retorna true para status pending', () => {
+    const charge = criarCobranca();
+
+    expect(charge.canExpire()).toBe(true);
+  });
+
+  it('retorna true para status awaiting_payment', () => {
+    const charge = new Charge({ ...baseProps, id: 'id', status: ChargeStatus.AWAITING_PAYMENT, createdAt: new Date(), updatedAt: new Date() });
+
+    expect(charge.canExpire()).toBe(true);
+  });
+
+  it.each([
+    ChargeStatus.PAID,
+    ChargeStatus.CANCELED,
+    ChargeStatus.EXPIRED,
+    ChargeStatus.FAILED,
+  ])('retorna false para status terminal: %s', (status) => {
+    const charge = new Charge({ ...baseProps, id: 'id', status, createdAt: new Date(), updatedAt: new Date() });
+
+    expect(charge.canExpire()).toBe(false);
+  });
+});
+
+describe('Charge.expire', () => {
+  it('transita de pending para expired sem guarda (uso interno via use case)', () => {
+    const charge = criarCobranca();
+    const expired = charge.expire();
+
+    expect(expired.status).toBe(ChargeStatus.EXPIRED);
+  });
+
+  it('transita de awaiting_payment para expired', () => {
+    const charge = new Charge({ ...baseProps, id: 'id', status: ChargeStatus.AWAITING_PAYMENT, createdAt: new Date(), updatedAt: new Date() });
+    const expired = charge.expire();
+
+    expect(expired.status).toBe(ChargeStatus.EXPIRED);
+  });
+
+  it('não muta a instância original', () => {
+    const charge = criarCobranca();
+    const expired = charge.expire();
+
+    expect(charge.status).toBe(ChargeStatus.PENDING);
+    expect(expired).not.toBe(charge);
+  });
+
+  it('renova updatedAt na transição', () => {
+    const before = new Date();
+    const charge = criarCobranca();
+    const expired = charge.expire();
+
+    expect(expired.updatedAt.getTime()).toBeGreaterThanOrEqual(before.getTime());
+  });
+});
+
+describe('Charge.markAsExpired', () => {
+  it('transita de pending para expired com guarda', () => {
+    const charge = criarCobranca();
+    const expired = charge.markAsExpired();
+
+    expect(expired.status).toBe(ChargeStatus.EXPIRED);
+  });
+
+  it('transita de awaiting_payment para expired', () => {
+    const charge = new Charge({ ...baseProps, id: 'id', status: ChargeStatus.AWAITING_PAYMENT, createdAt: new Date(), updatedAt: new Date() });
+    const expired = charge.markAsExpired();
+
+    expect(expired.status).toBe(ChargeStatus.EXPIRED);
+  });
+
+  it('não muta a instância original', () => {
+    const charge = criarCobranca();
+    const expired = charge.markAsExpired();
+
+    expect(charge.status).toBe(ChargeStatus.PENDING);
+    expect(expired).not.toBe(charge);
+  });
+
+  it('lança ConflictError se a cobrança já está expirada', () => {
+    const charge = new Charge({ ...baseProps, id: 'id', status: ChargeStatus.EXPIRED, createdAt: new Date(), updatedAt: new Date() });
+
+    expect(() => charge.markAsExpired()).toThrow(ConflictError);
+  });
+
+  it.each([
+    ChargeStatus.PAID,
+    ChargeStatus.CANCELED,
+    ChargeStatus.FAILED,
+  ])('lança ConflictError para qualquer outro estado terminal: %s', (status) => {
+    const charge = new Charge({ ...baseProps, id: 'id', status, createdAt: new Date(), updatedAt: new Date() });
+
+    expect(() => charge.markAsExpired()).toThrow(ConflictError);
+  });
+
+  it('ConflictError carrega o status atual no context', () => {
+    const charge = new Charge({ ...baseProps, id: 'test-id', status: ChargeStatus.PAID, createdAt: new Date(), updatedAt: new Date() });
+
+    expect(() => charge.markAsExpired()).toThrow(
+      expect.objectContaining({ code: 'CONFLICT', context: expect.objectContaining({ currentStatus: ChargeStatus.PAID }) }),
+    );
+  });
+});

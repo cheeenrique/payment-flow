@@ -166,4 +166,68 @@ describe('Payment.isTerminal', () => {
   it('retorna true para status failed', () => {
     expect(criarPagamento().startProcessing().fail('razão').isTerminal()).toBe(true);
   });
+
+  it('retorna true para status expired', () => {
+    expect(criarPagamento().expire().isTerminal()).toBe(true);
+  });
+});
+
+describe('Payment.expire', () => {
+  it('transita de pending para expired', () => {
+    const payment = criarPagamento();
+    const expired = payment.expire();
+
+    expect(expired.status).toBe('expired');
+  });
+
+  it('transita de processing para expired', () => {
+    const payment = criarPagamento().startProcessing();
+    const expired = payment.expire();
+
+    expect(expired.status).toBe('expired');
+  });
+
+  it('define failureReason informando o motivo da expiração', () => {
+    const payment = criarPagamento();
+    const expired = payment.expire();
+
+    expect(expired.failureReason).toBeTruthy();
+  });
+
+  it('não muta a instância original', () => {
+    const payment = criarPagamento();
+    const expired = payment.expire();
+
+    expect(payment.status).toBe('pending');
+    expect(expired).not.toBe(payment);
+  });
+
+  it('lança ConflictError ao tentar expirar a partir de approved', () => {
+    const payment = criarPagamento().startProcessing().approve();
+
+    expect(() => payment.expire()).toThrow(ConflictError);
+  });
+
+  it('lança ConflictError ao tentar expirar a partir de failed', () => {
+    const payment = criarPagamento().startProcessing().fail('motivo');
+
+    expect(() => payment.expire()).toThrow(ConflictError);
+  });
+
+  it('lança ConflictError ao tentar reexpirar pagamento já expirado', () => {
+    const payment = criarPagamento().expire();
+
+    expect(() => payment.expire()).toThrow(ConflictError);
+  });
+
+  it('ConflictError carrega o status atual no context', () => {
+    const payment = criarPagamento().startProcessing().approve();
+
+    expect(() => payment.expire()).toThrow(
+      expect.objectContaining({
+        code: 'CONFLICT',
+        context: expect.objectContaining({ currentStatus: 'approved' }),
+      }),
+    );
+  });
 });
