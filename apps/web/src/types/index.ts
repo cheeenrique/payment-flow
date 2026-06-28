@@ -46,14 +46,14 @@ export interface Invoice {
   updatedAt: string
 }
 
-/** Entrada no histórico de eventos de uma entidade */
+/** Evento de domínio registrado na timeline — campos conforme contrato GraphQL */
 export interface TimelineEvent {
   id: string
-  entityId: string
-  entityType: string
-  type: string
-  description: string
-  createdAt: string
+  eventType: string
+  aggregateId: string
+  aggregateType: string
+  correlationId: string
+  timestamp: string
 }
 
 /** Notificação destinada ao usuário */
