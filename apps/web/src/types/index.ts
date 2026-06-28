@@ -77,3 +77,13 @@ export interface CreateChargeDto {
   description?: string
   expiresAt?: string
 }
+
+/** Visão pública de uma cobrança retornada pelo endpoint GET /pay/:token */
+export interface CheckoutView {
+  amount: number
+  currency: string
+  description?: string
+  status: ChargeStatus
+  availableMethods: string[]
+  customerName?: string
+}
