@@ -11,6 +11,7 @@ import { CancelChargeUseCase } from './application/use-cases/cancel-charge.use-c
 import { GetChargeUseCase } from './application/use-cases/get-charge.use-case';
 import { ListChargesUseCase } from './application/use-cases/list-charges.use-case';
 import { ExpireChargeUseCase } from './application/use-cases/expire-charge.use-case';
+import { GetChargeByTokenUseCase } from './application/use-cases/get-charge-by-token.use-case';
 
 import { ChargesController } from './presentation/http/charges.controller';
 import { ChargesResolver } from './presentation/graphql/charges.resolver';
@@ -56,6 +57,7 @@ import { CHARGE_REPOSITORY } from './charges.tokens';
     CreateChargeUseCase,
     CancelChargeUseCase,
     GetChargeUseCase,
+    GetChargeByTokenUseCase,
     ListChargesUseCase,
     ExpireChargeUseCase,
 
@@ -71,6 +73,7 @@ import { CHARGE_REPOSITORY } from './charges.tokens';
     // Casos de uso exportados para o Simulator e módulos de infraestrutura
     ExpireChargeUseCase,
     GetChargeUseCase,
+    GetChargeByTokenUseCase,
     ListChargesUseCase,
   ],
 })
