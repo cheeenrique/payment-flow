@@ -58,3 +58,12 @@ export interface Notification {
   read: boolean
   createdAt: string
 }
+
+/** DTO para criação de uma nova cobrança via POST /charges */
+export interface CreateChargeDto {
+  customerId: string
+  amount: number
+  paymentMethod: string
+  description?: string
+  expiresAt?: string
+}

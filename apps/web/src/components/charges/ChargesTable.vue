@@ -1,0 +1,63 @@
+<script setup lang="ts">
+import { useChargesStore } from '@/stores/charges.store'
+import StatusBadge from '@/components/common/StatusBadge.vue'
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableEmpty,
+} from '@/components/ui/table'
+
+const store = useChargesStore()
+
+/** Formata valor em centavos para moeda brasileira (ex: 10000 → R$ 100,00) */
+function formatCurrency(centavos: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(centavos / 100)
+}
+
+/** Formata string ISO 8601 para data no formato local pt-BR */
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('pt-BR')
+}
+</script>
+
+<template>
+  <Table>
+    <TableHeader>
+      <TableRow>
+        <TableHead>ID</TableHead>
+        <TableHead>Cliente</TableHead>
+        <TableHead>Valor</TableHead>
+        <TableHead>Status</TableHead>
+        <TableHead>Data</TableHead>
+      </TableRow>
+    </TableHeader>
+
+    <TableBody>
+      <!-- Estado vazio: nenhuma cobrança carregada -->
+      <TableEmpty v-if="store.list.length === 0" :colspan="5">
+        Nenhuma cobrança encontrada.
+      </TableEmpty>
+
+      <TableRow
+        v-for="charge in store.list"
+        :key="charge.id"
+      >
+        <!-- ID truncado nos primeiros 8 caracteres -->
+        <TableCell class="font-mono text-xs">{{ charge.id.slice(0, 8) }}</TableCell>
+        <TableCell>{{ charge.customerId }}</TableCell>
+        <TableCell>{{ formatCurrency(charge.amount) }}</TableCell>
+        <TableCell>
+          <StatusBadge :status="charge.status" />
+        </TableCell>
+        <TableCell>{{ formatDate(charge.createdAt) }}</TableCell>
+      </TableRow>
+    </TableBody>
+  </Table>
+</template>
