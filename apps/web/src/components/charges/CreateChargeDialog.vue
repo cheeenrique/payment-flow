@@ -81,7 +81,7 @@ function fechar(): void {
 </script>
 
 <template>
-  <Dialog :open="aberto" @update:open="aberto = $event">
+  <Dialog :open="aberto" @update:open="(v) => { if (!v) fechar() }">
     <DialogTrigger as-child>
       <Button @click="aberto = true">Nova Cobrança</Button>
     </DialogTrigger>
