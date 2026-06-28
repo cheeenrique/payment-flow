@@ -15,6 +15,19 @@ export const useNotificationsStore = defineStore('notifications', () => {
   }
 
   /**
+   * Insere notificação nova ou substitui existente pelo mesmo id.
+   * Operação idempotente — segura para receber múltiplos eventos duplicados.
+   */
+  function upsert(item: Notification): void {
+    const index = list.value.findIndex(n => n.id === item.id)
+    if (index >= 0) {
+      list.value[index] = item
+    } else {
+      list.value.push(item)
+    }
+  }
+
+  /**
    * Adiciona notificação no início da lista (mais recente primeiro).
    * Chamado ao receber evento SSE `notification.created`.
    */
@@ -22,5 +35,5 @@ export const useNotificationsStore = defineStore('notifications', () => {
     list.value.unshift(item)
   }
 
-  return { list, set, prepend }
+  return { list, set, upsert, prepend }
 })

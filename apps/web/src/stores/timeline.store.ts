@@ -15,6 +15,19 @@ export const useTimelineStore = defineStore('timeline', () => {
   }
 
   /**
+   * Insere evento novo ou substitui existente pelo mesmo id.
+   * Operação idempotente — segura para receber múltiplos eventos duplicados.
+   */
+  function upsert(item: TimelineEvent): void {
+    const index = list.value.findIndex(e => e.id === item.id)
+    if (index >= 0) {
+      list.value[index] = item
+    } else {
+      list.value.push(item)
+    }
+  }
+
+  /**
    * Adiciona evento no início da lista (mais recente primeiro).
    * Chamado ao receber eventos SSE de timeline em tempo real.
    */
@@ -22,5 +35,5 @@ export const useTimelineStore = defineStore('timeline', () => {
     list.value.unshift(item)
   }
 
-  return { list, set, prepend }
+  return { list, set, upsert, prepend }
 })
