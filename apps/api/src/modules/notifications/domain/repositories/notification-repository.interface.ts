@@ -1,5 +1,11 @@
 import type { Notification } from '@/modules/notifications/domain/entities/notification.entity';
 
+/** Filtros opcionais para o feed de notificações do dashboard */
+export interface NotificationFilter {
+  /** Restringe ao cliente relacionado ao evento de negócio */
+  customerId?: string;
+}
+
 /**
  * Contrato de repositório para notificações.
  *
@@ -9,14 +15,16 @@ import type { Notification } from '@/modules/notifications/domain/entities/notif
 export interface INotificationRepository {
   create(notification: Notification): Promise<void>;
   findById(id: string): Promise<Notification | null>;
-  /** Lista notificações de um usuário específico paginadas, mais recentes primeiro */
-  findByUserId(
-    userId: string,
+  /**
+   * Feed global paginado, ordenado por mais recentes.
+   * Notificações são eventos de sistema (charge/payment/invoice), não
+   * vinculados a um usuário; aplica filtros opcionais quando informados.
+   */
+  findMany(
+    filter: NotificationFilter,
     page: number,
     limit: number,
   ): Promise<{ items: Notification[]; total: number }>;
-  /** Lista todas as notificações do sistema paginadas, mais recentes primeiro */
-  findAll(page: number, limit: number): Promise<{ items: Notification[]; total: number }>;
   /** Marca diretamente no banco sem buscar a entidade inteira */
   markAsRead(id: string): Promise<void>;
 }

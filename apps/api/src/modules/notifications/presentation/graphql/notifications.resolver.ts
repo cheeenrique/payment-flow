@@ -3,16 +3,14 @@ import { UseGuards } from '@nestjs/common';
 import { ListNotificationsUseCase } from '@/modules/notifications/application/use-cases/list-notifications.use-case';
 import { NotificationObjectType, NotificationsPageType } from './models/notification.model';
 import { GqlAuthGuard } from '@/modules/auth/presentation/graphql/gql-auth.guard';
-import { GqlCurrentUser } from '@/modules/auth/presentation/graphql/gql-current-user.decorator';
 import { buildPaginationMeta } from '@/shared/pagination/pagination-meta.helper';
-import type { AuthenticatedUser } from '@/modules/auth/presentation/http/strategies/jwt.strategy';
 import type { Notification } from '@/modules/notifications/domain/entities/notification.entity';
 
 /**
  * Resolver GraphQL code-first para consultas de notificações.
  *
  * Requer GraphQLModule configurado no AppModule (Apollo).
- * Usa GqlAuthGuard para extrair o usuário do contexto GraphQL.
+ * Feed global (eventos de sistema); filtro opcional por customerId.
  */
 @Resolver(() => NotificationObjectType)
 export class NotificationsResolver {
@@ -22,16 +20,16 @@ export class NotificationsResolver {
 
   @Query(() => NotificationsPageType, {
     name: 'notifications',
-    description: 'Lista paginada de notificações do usuário autenticado',
+    description: 'Feed paginado de notificações do sistema (filtro opcional por customerId)',
   })
   @UseGuards(GqlAuthGuard)
   async getNotifications(
-    @GqlCurrentUser() user: AuthenticatedUser,
     @Args('page', { type: () => Int, nullable: true, defaultValue: 1 }) page: number,
     @Args('limit', { type: () => Int, nullable: true, defaultValue: 20 }) limit: number,
+    @Args('customerId', { nullable: true }) customerId?: string,
   ): Promise<NotificationsPageType> {
     const result = await this.listNotificationsUseCase.execute({
-      userId: user.userId,
+      customerId,
       page,
       limit,
     });

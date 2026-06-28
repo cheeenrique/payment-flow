@@ -5,7 +5,10 @@ import {
   Notification,
   NotificationType,
 } from '@/modules/notifications/domain/entities/notification.entity';
-import type { INotificationRepository } from '@/modules/notifications/domain/repositories/notification-repository.interface';
+import type {
+  INotificationRepository,
+  NotificationFilter,
+} from '@/modules/notifications/domain/repositories/notification-repository.interface';
 import {
   NotificationModel,
   NotificationDocument,
@@ -58,36 +61,26 @@ export class MongoNotificationRepository implements INotificationRepository {
     return doc ? this.toDomain(doc) : null;
   }
 
-  async findByUserId(
-    userId: string,
+  async findMany(
+    filter: NotificationFilter,
     page: number,
     limit: number,
   ): Promise<{ items: Notification[]; total: number }> {
     const skip = (page - 1) * limit;
+    // Monta o filtro Mongo só com os campos informados (feed global por padrão).
+    const query: Record<string, unknown> = {};
+    if (filter.customerId) {
+      query['customerId'] = filter.customerId;
+    }
     const [docs, total] = await Promise.all([
       this.model
-        .find({ userId })
+        .find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .lean<NotificationLean[]>()
         .exec(),
-      this.model.countDocuments({ userId }).exec(),
-    ]);
-    return { items: docs.map((d) => this.toDomain(d)), total };
-  }
-
-  async findAll(page: number, limit: number): Promise<{ items: Notification[]; total: number }> {
-    const skip = (page - 1) * limit;
-    const [docs, total] = await Promise.all([
-      this.model
-        .find()
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean<NotificationLean[]>()
-        .exec(),
-      this.model.countDocuments().exec(),
+      this.model.countDocuments(query).exec(),
     ]);
     return { items: docs.map((d) => this.toDomain(d)), total };
   }

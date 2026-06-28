@@ -5,17 +5,18 @@ import type { PaginatedResult } from '@/shared/pagination/paginated-result.inter
 import { NOTIFICATION_REPOSITORY } from '@/modules/notifications/notifications.tokens';
 
 export interface ListNotificationsInput {
-  /** Quando informado, filtra notificações do usuário; sem filtro retorna todas */
-  userId?: string;
+  /** Filtro opcional pelo cliente do evento de negócio */
+  customerId?: string;
   page: number;
   limit: number;
 }
 
 /**
- * Lista notificações do sistema com paginação.
+ * Feed de notificações do dashboard, paginado.
  *
- * Com userId: retorna apenas notificações do usuário autenticado.
- * Sem userId: retorna todas as notificações (uso administrativo).
+ * Notificações são eventos de sistema (charge/payment/invoice), visíveis
+ * a operadores/admins — não vinculadas a um usuário específico.
+ * Filtro opcional por customerId para a visão por cliente.
  */
 @Injectable()
 export class ListNotificationsUseCase {
@@ -25,10 +26,12 @@ export class ListNotificationsUseCase {
   ) {}
 
   async execute(input: ListNotificationsInput): Promise<PaginatedResult<Notification>> {
-    const { userId, page, limit } = input;
-    const { items, total } = userId
-      ? await this.repo.findByUserId(userId, page, limit)
-      : await this.repo.findAll(page, limit);
+    const { customerId, page, limit } = input;
+    const { items, total } = await this.repo.findMany(
+      { customerId },
+      page,
+      limit,
+    );
     return { items, total, page, limit };
   }
 }

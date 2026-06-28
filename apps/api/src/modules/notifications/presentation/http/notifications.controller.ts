@@ -12,12 +12,10 @@ import { JwtAuthGuard } from '@/modules/auth/presentation/http/guards/jwt-auth.g
 import { PermissionsGuard } from '@/modules/auth/presentation/http/guards/permissions.guard';
 import { RequirePermissions } from '@/modules/auth/presentation/http/decorators/require-permissions.decorator';
 import { Permissions } from '@/modules/auth/domain/rbac/permissions';
-import { CurrentUser } from '@/modules/auth/presentation/http/decorators/current-user.decorator';
-import type { AuthenticatedUser } from '@/modules/auth/presentation/http/strategies/jwt.strategy';
 import { ListNotificationsUseCase } from '@/modules/notifications/application/use-cases/list-notifications.use-case';
 import { GetNotificationUseCase } from '@/modules/notifications/application/use-cases/get-notification.use-case';
 import { MarkAsReadUseCase } from '@/modules/notifications/application/use-cases/mark-as-read.use-case';
-import { PaginationQueryDto } from '@/shared/pagination/pagination-query.dto';
+import { ListNotificationsQueryDto } from '@/modules/notifications/presentation/http/dtos/list-notifications-query.dto';
 
 /**
  * Controller REST para o módulo de notificações.
@@ -35,15 +33,12 @@ export class NotificationsController {
     private readonly markAsReadUseCase: MarkAsReadUseCase,
   ) {}
 
-  /** Lista notificações do usuário autenticado, paginadas, ordenadas por mais recentes */
+  /** Feed global de notificações, paginado, mais recentes primeiro; filtro opcional por customerId */
   @Get()
   @RequirePermissions(Permissions.NotificationsRead)
-  handleList(
-    @CurrentUser() user: AuthenticatedUser,
-    @Query() query: PaginationQueryDto,
-  ) {
+  handleList(@Query() query: ListNotificationsQueryDto) {
     return this.listNotificationsUseCase.execute({
-      userId: user.userId,
+      customerId: query.customerId,
       page: query.page,
       limit: query.limit,
     });
