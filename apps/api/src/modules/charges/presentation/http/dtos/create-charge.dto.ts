@@ -22,9 +22,10 @@ export class CreateChargeDto {
   @IsPositive()
   amount!: number;
 
-  /** Método de pagamento selecionado */
+  /** Método de pagamento — opcional: no fluxo de checkout o cliente escolhe no link */
+  @IsOptional()
   @IsEnum(PaymentMethod)
-  paymentMethod!: PaymentMethod;
+  paymentMethod?: PaymentMethod;
 
   /** Descrição opcional da cobrança */
   @IsOptional()
