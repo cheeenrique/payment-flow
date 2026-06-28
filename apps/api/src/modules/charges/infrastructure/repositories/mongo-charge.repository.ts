@@ -85,6 +85,11 @@ export class MongoChargeRepository implements IChargeRepository {
     return docs.map((doc) => this.toDomain(doc));
   }
 
+  async findByPaymentLinkToken(token: string): Promise<Charge | null> {
+    const doc = await this.model.findOne({ paymentLinkToken: token }).lean<ChargeLean>().exec();
+    return doc ? this.toDomain(doc) : null;
+  }
+
   async countByStatus(): Promise<Record<string, number>> {
     const results = await this.model
       .aggregate<{ _id: string; count: number }>([

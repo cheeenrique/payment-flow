@@ -12,6 +12,7 @@ function makeMocks() {
     update: jest.fn(),
     findExpirable: jest.fn(),
     countByStatus: jest.fn(),
+    findByPaymentLinkToken: jest.fn(),
   };
 
   const eventBus = {

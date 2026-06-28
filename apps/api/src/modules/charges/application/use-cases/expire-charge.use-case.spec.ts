@@ -29,6 +29,7 @@ function makeMocks(chargeFake: Charge | null = null) {
     update: jest.fn().mockResolvedValue(undefined),
     findExpirable: jest.fn(),
     countByStatus: jest.fn().mockResolvedValue({}),
+    findByPaymentLinkToken: jest.fn(),
   };
 
   const eventBus = {
