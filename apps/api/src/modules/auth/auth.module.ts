@@ -73,6 +73,7 @@ import {
   ],
   exports: [
     // Other modules import AuthModule to get these
+    JwtModule, // reexporta JwtService para guards externos (ex: SseJwtGuard)
     JwtAuthGuard,
     JwtStrategy,
     PassportModule,
