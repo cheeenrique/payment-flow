@@ -33,10 +33,15 @@ export type InvoiceStatus = 'requested' | 'processing' | 'issued' | 'failed'
 /** Representa uma fatura gerada no fluxo de pagamento */
 export interface Invoice {
   id: string
-  chargeId: string
+  paymentId: string
+  chargeId?: string
   status: InvoiceStatus
   amount: number
   currency: string
+  /** Referência externa da nota fiscal emitida (ex: número NF-e) */
+  externalReference?: string
+  /** Data de emissão — presente apenas quando status é 'issued' */
+  issuedAt?: string
   createdAt: string
   updatedAt: string
 }

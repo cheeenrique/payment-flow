@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useChargesStore } from '@/stores/charges.store'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import { formatCurrency, formatDate } from '@/utils/format'
 import {
   Table,
   TableHeader,
@@ -12,19 +13,6 @@ import {
 } from '@/components/ui/table'
 
 const store = useChargesStore()
-
-/** Formata valor em centavos para moeda brasileira (ex: 10000 → R$ 100,00) */
-function formatCurrency(centavos: number): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(centavos / 100)
-}
-
-/** Formata string ISO 8601 para data no formato local pt-BR */
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('pt-BR')
-}
 </script>
 
 <template>
