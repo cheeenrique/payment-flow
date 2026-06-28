@@ -12,8 +12,10 @@ import { GetChargeUseCase } from './application/use-cases/get-charge.use-case';
 import { ListChargesUseCase } from './application/use-cases/list-charges.use-case';
 import { ExpireChargeUseCase } from './application/use-cases/expire-charge.use-case';
 import { GetChargeByTokenUseCase } from './application/use-cases/get-charge-by-token.use-case';
+import { ConfirmPaymentLinkUseCase } from './application/use-cases/confirm-payment-link.use-case';
 
 import { ChargesController } from './presentation/http/charges.controller';
+import { PublicChargesController } from './presentation/public/public-charges.controller';
 import { ChargesResolver } from './presentation/graphql/charges.resolver';
 
 import { RabbitModule } from '@/infra/messaging/rabbit.module';
@@ -46,6 +48,7 @@ import { CHARGE_REPOSITORY } from './charges.tokens';
   ],
   controllers: [
     ChargesController,
+    PublicChargesController,
     // Microservice — consumer de resultados de pagamento (payment.approved/failed/expired.v1)
     PaymentResultConsumer,
   ],
@@ -58,6 +61,7 @@ import { CHARGE_REPOSITORY } from './charges.tokens';
     CancelChargeUseCase,
     GetChargeUseCase,
     GetChargeByTokenUseCase,
+    ConfirmPaymentLinkUseCase,
     ListChargesUseCase,
     ExpireChargeUseCase,
 
