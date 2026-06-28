@@ -16,6 +16,8 @@ import { ConfirmPaymentLinkUseCase } from './application/use-cases/confirm-payme
 
 import { ChargesController } from './presentation/http/charges.controller';
 import { PublicChargesController } from './presentation/public/public-charges.controller';
+import { PublicChargeSseController } from './presentation/public/public-charge-sse.controller';
+import { LinkTokenGuard } from './presentation/public/link-token.guard';
 import { ChargesResolver } from './presentation/graphql/charges.resolver';
 
 import { RabbitModule } from '@/infra/messaging/rabbit.module';
@@ -49,6 +51,7 @@ import { CHARGE_REPOSITORY } from './charges.tokens';
   controllers: [
     ChargesController,
     PublicChargesController,
+    PublicChargeSseController,
     // Microservice — consumer de resultados de pagamento (payment.approved/failed/expired.v1)
     PaymentResultConsumer,
   ],
@@ -70,6 +73,9 @@ import { CHARGE_REPOSITORY } from './charges.tokens';
 
     // Resolver GraphQL code-first (lado de leitura)
     ChargesResolver,
+
+    // Guard público de SSE — precisa ser provider para injeção do CHARGE_REPOSITORY
+    LinkTokenGuard,
   ],
   exports: [
     // Repositório exportado para leitura cross-module (ex: DashboardModule — CQRS read side)
