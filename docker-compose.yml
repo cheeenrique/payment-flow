@@ -1,0 +1,66 @@
+services:
+  # =========================
+  # INFRA
+  # =========================
+
+  mongo:
+    image: mongo:7
+    container_name: payment-flow-mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: payment-flow-rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+
+  # =========================
+  # BACKEND (NestJS)
+  # =========================
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: payment-flow-api
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mongo
+      - rabbitmq
+    environment:
+      PORT: 3000
+      MONGO_URL: mongodb://mongo:27017/payment-flow
+      RABBITMQ_URL: amqp://admin:admin@rabbitmq:5672
+      JWT_SECRET: super-secret
+      JWT_EXPIRES_IN: 15m
+
+  # =========================
+  # FRONTEND (Vue 3)
+  # =========================
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: payment-flow-web
+    restart: always
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+    environment:
+      VITE_API_URL: http://localhost:3000
+
+volumes:
+  mongo_data:
