@@ -16,12 +16,12 @@ export type EventHandlerMap = Record<string, EventHandler>
  * Roteia o evento para o handler registrado pelo seu `type`.
  * Tipos sem handler registrado resultam em no-op silencioso.
  */
-export function dispatch(evento: SseEvent, handlers: EventHandlerMap): void {
-  const handler = handlers[evento.type]
+export function dispatch(event: SseEvent, handlers: EventHandlerMap): void {
+  const handler = handlers[event.type]
 
   if (handler === undefined) {
     return
   }
 
-  handler(evento.payload)
+  handler(event.payload)
 }

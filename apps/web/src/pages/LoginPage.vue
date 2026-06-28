@@ -14,26 +14,26 @@ const authStore = useAuthStore()
 
 // Campos do formulário de login
 const email = ref('')
-const senha = ref('')
-const mensagemErro = ref<string | null>(null)
-const carregando = ref(false)
+const password = ref('')
+const errorMessage = ref<string | null>(null)
+const loading = ref(false)
 
 /**
  * Envia as credenciais e redireciona para a home em caso de sucesso.
  * Em caso de falha, exibe mensagem de erro sem limpar os campos.
  */
 async function handleSubmit(): Promise<void> {
-  mensagemErro.value = null
-  carregando.value = true
+  errorMessage.value = null
+  loading.value = true
 
   try {
-    await authStore.login(email.value, senha.value)
+    await authStore.login(email.value, password.value)
     await router.push('/')
   } catch {
     // Mantém os campos preenchidos para o usuário corrigir apenas o erro
-    mensagemErro.value = 'E-mail ou senha inválidos. Tente novamente.'
+    errorMessage.value = 'E-mail ou senha inválidos. Tente novamente.'
   } finally {
-    carregando.value = false
+    loading.value = false
   }
 }
 </script>
@@ -64,12 +64,12 @@ async function handleSubmit(): Promise<void> {
 
           <!-- Campo de senha -->
           <div class="flex flex-col gap-1.5">
-            <label for="senha" class="text-sm font-medium leading-none">
+            <label for="password" class="text-sm font-medium leading-none">
               Senha
             </label>
             <Input
-              id="senha"
-              v-model="senha"
+              id="password"
+              v-model="password"
               type="password"
               placeholder="••••••••"
               autocomplete="current-password"
@@ -78,12 +78,12 @@ async function handleSubmit(): Promise<void> {
           </div>
 
           <!-- Mensagem de erro inline — exibida somente quando há falha -->
-          <p v-if="mensagemErro" role="alert" class="text-sm text-destructive">
-            {{ mensagemErro }}
+          <p v-if="errorMessage" role="alert" class="text-sm text-destructive">
+            {{ errorMessage }}
           </p>
 
-          <Button type="submit" :disabled="carregando" class="w-full">
-            {{ carregando ? 'Entrando...' : 'Entrar' }}
+          <Button type="submit" :disabled="loading" class="w-full">
+            {{ loading ? 'Entrando...' : 'Entrar' }}
           </Button>
         </form>
       </CardContent>

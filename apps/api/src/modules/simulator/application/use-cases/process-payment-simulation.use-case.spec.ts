@@ -6,7 +6,7 @@ import type { EventBusService } from '@/infra/messaging/event-bus.service';
 import type { SseService } from '@/infra/sse/sse.service';
 
 /** Config com taxa de aprovação 100% — garante resultado determinístico */
-function criarConfigSempreAprova(): SimulatorConfig {
+function makeAlwaysApproveConfig(): SimulatorConfig {
   return new SimulatorConfig({
     id: SimulatorConfig.GLOBAL_ID,
     pix: { successRate: 1.0, maxDelayMs: 0 },
@@ -17,7 +17,7 @@ function criarConfigSempreAprova(): SimulatorConfig {
 }
 
 /** Config com taxa de aprovação 0% — garante falha determinística */
-function criarConfigSempreFalha(): SimulatorConfig {
+function makeAlwaysFailConfig(): SimulatorConfig {
   return new SimulatorConfig({
     id: SimulatorConfig.GLOBAL_ID,
     pix: { successRate: 0.0, maxDelayMs: 0 },
@@ -28,7 +28,7 @@ function criarConfigSempreFalha(): SimulatorConfig {
 }
 
 /** Config com riskFactor 100% — garante erro sistêmico no cartão */
-function criarConfigErroSistemico(): SimulatorConfig {
+function makeSystemicErrorConfig(): SimulatorConfig {
   return new SimulatorConfig({
     id: SimulatorConfig.GLOBAL_ID,
     pix: { successRate: 0.5, maxDelayMs: 0 },
@@ -38,7 +38,7 @@ function criarConfigErroSistemico(): SimulatorConfig {
   });
 }
 
-function criarMocks(config: SimulatorConfig | null = criarConfigSempreAprova()) {
+function makeMocks(config: SimulatorConfig | null = makeAlwaysApproveConfig()) {
   const repo: jest.Mocked<ISimulatorConfigRepository> = {
     findGlobal: jest.fn().mockResolvedValue(config),
     upsert: jest.fn(),
@@ -77,7 +77,7 @@ const inputBoleto: ProcessPaymentSimulationInput = {
   correlationId: 'corr-2',
 };
 
-const inputCartao: ProcessPaymentSimulationInput = {
+const inputCard: ProcessPaymentSimulationInput = {
   paymentId: 'payment-card-uuid',
   method: 'credit_card',
   correlationId: 'corr-3',
@@ -98,7 +98,7 @@ describe('ProcessPaymentSimulationUseCase', () => {
 
   describe('uso da configuração do repositório', () => {
     it('usa a configuração do repositório quando disponível', async () => {
-      const { repo, verdictRepo, eventBus, sseService } = criarMocks(criarConfigSempreAprova());
+      const { repo, verdictRepo, eventBus, sseService } = makeMocks(makeAlwaysApproveConfig());
       const useCase = new ProcessPaymentSimulationUseCase(repo, verdictRepo, eventBus, sseService);
 
       await useCase.execute(inputPix);
@@ -107,7 +107,7 @@ describe('ProcessPaymentSimulationUseCase', () => {
     });
 
     it('usa configuração padrão quando repositório retorna null', async () => {
-      const { repo, verdictRepo, eventBus, sseService } = criarMocks(null);
+      const { repo, verdictRepo, eventBus, sseService } = makeMocks(null);
       const useCase = new ProcessPaymentSimulationUseCase(repo, verdictRepo, eventBus, sseService);
 
       // Não deve lançar exceção — usa SimulatorConfig.createDefault()
@@ -117,7 +117,7 @@ describe('ProcessPaymentSimulationUseCase', () => {
 
   describe('PIX — aprovação (successRate=1.0, Math.random=0.5)', () => {
     it('após o delay, publica SimulatorPaymentApproved via eventBus', async () => {
-      const { repo, verdictRepo, eventBus, sseService } = criarMocks(criarConfigSempreAprova());
+      const { repo, verdictRepo, eventBus, sseService } = makeMocks(makeAlwaysApproveConfig());
       const useCase = new ProcessPaymentSimulationUseCase(repo, verdictRepo, eventBus, sseService);
 
       await useCase.execute(inputPix);
@@ -129,7 +129,7 @@ describe('ProcessPaymentSimulationUseCase', () => {
     });
 
     it('após o delay, emite evento SSE simulator.payment.approved', async () => {
-      const { repo, verdictRepo, eventBus, sseService } = criarMocks(criarConfigSempreAprova());
+      const { repo, verdictRepo, eventBus, sseService } = makeMocks(makeAlwaysApproveConfig());
       const useCase = new ProcessPaymentSimulationUseCase(repo, verdictRepo, eventBus, sseService);
 
       await useCase.execute(inputPix);
@@ -143,7 +143,7 @@ describe('ProcessPaymentSimulationUseCase', () => {
 
   describe('PIX — falha (successRate=0.0, Math.random=0.5)', () => {
     it('após o delay, publica SimulatorPaymentFailed via eventBus', async () => {
-      const { repo, verdictRepo, eventBus, sseService } = criarMocks(criarConfigSempreFalha());
+      const { repo, verdictRepo, eventBus, sseService } = makeMocks(makeAlwaysFailConfig());
       const useCase = new ProcessPaymentSimulationUseCase(repo, verdictRepo, eventBus, sseService);
 
       await useCase.execute(inputPix);
@@ -155,7 +155,7 @@ describe('ProcessPaymentSimulationUseCase', () => {
     });
 
     it('falha PIX usa razão intermittent_failure', async () => {
-      const { repo, verdictRepo, eventBus, sseService } = criarMocks(criarConfigSempreFalha());
+      const { repo, verdictRepo, eventBus, sseService } = makeMocks(makeAlwaysFailConfig());
       const useCase = new ProcessPaymentSimulationUseCase(repo, verdictRepo, eventBus, sseService);
 
       await useCase.execute(inputPix);
@@ -169,7 +169,7 @@ describe('ProcessPaymentSimulationUseCase', () => {
 
   describe('Boleto — aprovação (successRate=1.0)', () => {
     it('após o delay, publica SimulatorPaymentApproved via eventBus', async () => {
-      const { repo, verdictRepo, eventBus, sseService } = criarMocks(criarConfigSempreAprova());
+      const { repo, verdictRepo, eventBus, sseService } = makeMocks(makeAlwaysApproveConfig());
       const useCase = new ProcessPaymentSimulationUseCase(repo, verdictRepo, eventBus, sseService);
 
       await useCase.execute(inputBoleto);
@@ -183,7 +183,7 @@ describe('ProcessPaymentSimulationUseCase', () => {
 
   describe('Boleto — não pago (successRate=0.0)', () => {
     it('boleto não pago usa razão expired', async () => {
-      const { repo, verdictRepo, eventBus, sseService } = criarMocks(criarConfigSempreFalha());
+      const { repo, verdictRepo, eventBus, sseService } = makeMocks(makeAlwaysFailConfig());
       const useCase = new ProcessPaymentSimulationUseCase(repo, verdictRepo, eventBus, sseService);
 
       await useCase.execute(inputBoleto);
@@ -197,10 +197,10 @@ describe('ProcessPaymentSimulationUseCase', () => {
 
   describe('Cartão — erro sistêmico (riskFactor=1.0)', () => {
     it('erro sistêmico publica SimulatorPaymentFailed com razão system_error', async () => {
-      const { repo, verdictRepo, eventBus, sseService } = criarMocks(criarConfigErroSistemico());
+      const { repo, verdictRepo, eventBus, sseService } = makeMocks(makeSystemicErrorConfig());
       const useCase = new ProcessPaymentSimulationUseCase(repo, verdictRepo, eventBus, sseService);
 
-      await useCase.execute(inputCartao);
+      await useCase.execute(inputCard);
 
       // Cartão tem delay fixo de 1s (>0) → veredito é PERSISTIDO (durável), não emitido inline.
       expect(verdictRepo.save).toHaveBeenCalledWith(
@@ -211,10 +211,10 @@ describe('ProcessPaymentSimulationUseCase', () => {
 
   describe('Cartão — aprovação (riskFactor=0.0, successRate=1.0)', () => {
     it('após o delay, publica aprovação para cartão com risco zero', async () => {
-      const { repo, verdictRepo, eventBus, sseService } = criarMocks(criarConfigSempreAprova());
+      const { repo, verdictRepo, eventBus, sseService } = makeMocks(makeAlwaysApproveConfig());
       const useCase = new ProcessPaymentSimulationUseCase(repo, verdictRepo, eventBus, sseService);
 
-      await useCase.execute(inputCartao);
+      await useCase.execute(inputCard);
 
       // Cartão (delay fixo 1s) → veredito persistido como 'approved'.
       expect(verdictRepo.save).toHaveBeenCalledWith(
@@ -225,7 +225,7 @@ describe('ProcessPaymentSimulationUseCase', () => {
 
   describe('Cartão — fundos insuficientes (riskFactor=0.0, successRate=0.0)', () => {
     it('falha de cartão sem risco sistêmico usa razão insufficient_funds', async () => {
-      const { repo, verdictRepo, eventBus, sseService } = criarMocks(
+      const { repo, verdictRepo, eventBus, sseService } = makeMocks(
         new SimulatorConfig({
           id: SimulatorConfig.GLOBAL_ID,
           pix: { successRate: 0.5, maxDelayMs: 0 },
@@ -236,7 +236,7 @@ describe('ProcessPaymentSimulationUseCase', () => {
       );
       const useCase = new ProcessPaymentSimulationUseCase(repo, verdictRepo, eventBus, sseService);
 
-      await useCase.execute(inputCartao);
+      await useCase.execute(inputCard);
 
       // Cartão (delay fixo 1s) → veredito persistido com razão insufficient_funds.
       expect(verdictRepo.save).toHaveBeenCalledWith(
@@ -247,8 +247,8 @@ describe('ProcessPaymentSimulationUseCase', () => {
 
   describe('delay e notificações imediatas', () => {
     it('não notifica delay quando maxDelayMs=0 (delay zero)', async () => {
-      const configSemDelay = criarConfigSempreAprova(); // maxDelayMs=0
-      const { repo, verdictRepo, eventBus, sseService } = criarMocks(configSemDelay);
+      const configWithoutDelay = makeAlwaysApproveConfig(); // maxDelayMs=0
+      const { repo, verdictRepo, eventBus, sseService } = makeMocks(configWithoutDelay);
       const useCase = new ProcessPaymentSimulationUseCase(repo, verdictRepo, eventBus, sseService);
 
       await useCase.execute(inputPix);
@@ -260,14 +260,14 @@ describe('ProcessPaymentSimulationUseCase', () => {
     });
 
     it('o execute retorna imediatamente (não bloqueia pelo delay)', async () => {
-      const configComDelay = new SimulatorConfig({
+      const configWithDelay = new SimulatorConfig({
         id: SimulatorConfig.GLOBAL_ID,
         pix: { successRate: 1.0, maxDelayMs: 5_000 },
         boleto: { delayMs: 10_000, successRate: 1.0 },
         creditCard: { successRate: 1.0, riskFactor: 0.0 },
         updatedAt: new Date(),
       });
-      const { repo, verdictRepo, eventBus, sseService } = criarMocks(configComDelay);
+      const { repo, verdictRepo, eventBus, sseService } = makeMocks(configWithDelay);
       const useCase = new ProcessPaymentSimulationUseCase(repo, verdictRepo, eventBus, sseService);
 
       // Deve resolver sem aguardar o setTimeout (fake timers não avançam automaticamente)

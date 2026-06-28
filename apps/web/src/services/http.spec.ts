@@ -9,26 +9,26 @@ type FakeResponse<T> = Pick<AxiosResponse<ApiEnvelope<T>>, 'data'>
 
 describe('unwrap', () => {
   it('extrai data do envelope { data, meta }', () => {
-    const resposta: FakeResponse<{ x: number }> = {
+    const response: FakeResponse<{ x: number }> = {
       data: { data: { x: 1 }, meta: {} },
     }
 
     // Forçamos o cast pois só precisamos de .data para o unwrap funcionar
-    const resultado = unwrap(resposta as AxiosResponse<ApiEnvelope<{ x: number }>>)
+    const result = unwrap(response as AxiosResponse<ApiEnvelope<{ x: number }>>)
 
-    expect(resultado).toEqual({ x: 1 })
+    expect(result).toEqual({ x: 1 })
   })
 
   it('preserva o tipo genérico T ao extrair', () => {
-    type Pagamento = { id: string; valor: number }
+    type Payment = { id: string; amount: number }
 
-    const resposta: FakeResponse<Pagamento> = {
-      data: { data: { id: 'pay_001', valor: 9900 }, meta: { page: 1 } },
+    const response: FakeResponse<Payment> = {
+      data: { data: { id: 'pay_001', amount: 9900 }, meta: { page: 1 } },
     }
 
-    const resultado = unwrap(resposta as AxiosResponse<ApiEnvelope<Pagamento>>)
+    const result = unwrap(response as AxiosResponse<ApiEnvelope<Payment>>)
 
-    expect(resultado).toStrictEqual({ id: 'pay_001', valor: 9900 })
+    expect(result).toStrictEqual({ id: 'pay_001', amount: 9900 })
   })
 })
 
@@ -63,15 +63,15 @@ describe('applyJwtHeader', () => {
     localStorageMock.setItem('accessToken', 'token-secreto')
 
     const config = { headers: {} } as InternalAxiosRequestConfig
-    const resultado = applyJwtHeader(config)
+    const result = applyJwtHeader(config)
 
-    expect(resultado.headers['Authorization']).toBe('Bearer token-secreto')
+    expect(result.headers['Authorization']).toBe('Bearer token-secreto')
   })
 
   it('não adiciona Authorization quando accessToken está ausente', () => {
     const config = { headers: {} } as InternalAxiosRequestConfig
-    const resultado = applyJwtHeader(config)
+    const result = applyJwtHeader(config)
 
-    expect(resultado.headers['Authorization']).toBeUndefined()
+    expect(result.headers['Authorization']).toBeUndefined()
   })
 })

@@ -17,13 +17,13 @@ import {
 const store = useChargesStore()
 
 // Controla abertura/fechamento do dialog
-const aberto = ref(false)
+const open = ref(false)
 
 // Estado de envio em andamento
-const enviando = ref(false)
+const submitting = ref(false)
 
 // Mensagem de erro exibida quando a criação falha
-const erro = ref<string | null>(null)
+const error = ref<string | null>(null)
 
 // Valores do formulário com tipos explícitos
 const form = reactive<CreateChargeDto>({
@@ -35,19 +35,19 @@ const form = reactive<CreateChargeDto>({
 })
 
 /** Reseta os campos do formulário para o estado inicial */
-function resetarForm(): void {
+function resetForm(): void {
   form.customerId = ''
   form.amount = 0
   form.paymentMethod = ''
   form.description = ''
   form.expiresAt = ''
-  erro.value = null
+  error.value = null
 }
 
 /** Submete o formulário, cria a cobrança e atualiza a store */
-async function submeter(): Promise<void> {
-  erro.value = null
-  enviando.value = true
+async function submit(): Promise<void> {
+  error.value = null
+  submitting.value = true
 
   // Monta DTO omitindo campos opcionais vazios
   const dto: CreateChargeDto = {
@@ -60,30 +60,30 @@ async function submeter(): Promise<void> {
   if (form.expiresAt) dto.expiresAt = form.expiresAt
 
   try {
-    const novaCobranca = await create(dto)
-    store.upsert(novaCobranca)
-    aberto.value = false
-    resetarForm()
+    const newCharge = await create(dto)
+    store.upsert(newCharge)
+    open.value = false
+    resetForm()
   } catch (err) {
     // Exibe mensagem de erro amigável sem perder o contexto do campo
-    erro.value = err instanceof Error ? err.message : 'Erro ao criar cobrança. Tente novamente.'
+    error.value = err instanceof Error ? err.message : 'Erro ao criar cobrança. Tente novamente.'
     console.error('[CreateChargeDialog] falha ao criar cobrança:', err)
   } finally {
-    enviando.value = false
+    submitting.value = false
   }
 }
 
 /** Fecha o dialog e descarta as alterações não salvas */
-function fechar(): void {
-  aberto.value = false
-  resetarForm()
+function close(): void {
+  open.value = false
+  resetForm()
 }
 </script>
 
 <template>
-  <Dialog :open="aberto" @update:open="(v) => { if (!v) fechar() }">
+  <Dialog :open="open" @update:open="(v) => { if (!v) close() }">
     <DialogTrigger as-child>
-      <Button @click="aberto = true">Nova Cobrança</Button>
+      <Button @click="open = true">Nova Cobrança</Button>
     </DialogTrigger>
 
     <DialogContent :show-close-button="false">
@@ -91,7 +91,7 @@ function fechar(): void {
         <DialogTitle>Nova Cobrança</DialogTitle>
       </DialogHeader>
 
-      <form class="grid gap-4" @submit.prevent="submeter">
+      <form class="grid gap-4" @submit.prevent="submit">
         <!-- ID do cliente -->
         <div class="grid gap-1.5">
           <label for="customerId" class="text-sm font-medium">Cliente (ID)</label>
@@ -155,14 +155,14 @@ function fechar(): void {
         </div>
 
         <!-- Mensagem de erro inline -->
-        <p v-if="erro" class="text-sm text-destructive" role="alert">{{ erro }}</p>
+        <p v-if="error" class="text-sm text-destructive" role="alert">{{ error }}</p>
 
         <DialogFooter>
-          <Button type="button" variant="outline" :disabled="enviando" @click="fechar">
+          <Button type="button" variant="outline" :disabled="submitting" @click="close">
             Cancelar
           </Button>
-          <Button type="submit" :disabled="enviando">
-            <span v-if="enviando">Criando...</span>
+          <Button type="submit" :disabled="submitting">
+            <span v-if="submitting">Criando...</span>
             <span v-else>Criar Cobrança</span>
           </Button>
         </DialogFooter>

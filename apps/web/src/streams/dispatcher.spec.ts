@@ -9,7 +9,7 @@ describe('dispatch', () => {
     const handlers: EventHandlerMap = {
       'payment.approved': handler,
     }
-    const evento: SseEvent = {
+    const event: SseEvent = {
       type: 'payment.approved',
       timestamp: '2026-06-28T00:00:00Z',
       correlationId: 'corr-123',
@@ -17,11 +17,11 @@ describe('dispatch', () => {
     }
 
     // Act
-    dispatch(evento, handlers)
+    dispatch(event, handlers)
 
     // Assert
     expect(handler).toHaveBeenCalledOnce()
-    expect(handler).toHaveBeenCalledWith(evento.payload)
+    expect(handler).toHaveBeenCalledWith(event.payload)
   })
 
   it('não chama nenhum handler para tipo desconhecido (no-op)', () => {
@@ -30,7 +30,7 @@ describe('dispatch', () => {
     const handlers: EventHandlerMap = {
       'payment.approved': handler,
     }
-    const eventoDesconhecido: SseEvent = {
+    const unknownEvent: SseEvent = {
       type: 'tipo.inexistente',
       timestamp: '2026-06-28T00:00:00Z',
       correlationId: 'corr-999',
@@ -38,7 +38,7 @@ describe('dispatch', () => {
     }
 
     // Act — não deve lançar erro
-    expect(() => dispatch(eventoDesconhecido, handlers)).not.toThrow()
+    expect(() => dispatch(unknownEvent, handlers)).not.toThrow()
 
     // Assert
     expect(handler).not.toHaveBeenCalled()
@@ -46,13 +46,13 @@ describe('dispatch', () => {
 
   it('chama apenas o handler do tipo correspondente quando há múltiplos handlers', () => {
     // Arrange
-    const handlerAprovado = vi.fn()
-    const handlerRecusado = vi.fn()
+    const approvedHandler = vi.fn()
+    const failedHandler = vi.fn()
     const handlers: EventHandlerMap = {
-      'payment.approved': handlerAprovado,
-      'payment.declined': handlerRecusado,
+      'payment.approved': approvedHandler,
+      'payment.declined': failedHandler,
     }
-    const evento: SseEvent = {
+    const event: SseEvent = {
       type: 'payment.declined',
       timestamp: '2026-06-28T00:00:00Z',
       correlationId: 'corr-777',
@@ -60,11 +60,11 @@ describe('dispatch', () => {
     }
 
     // Act
-    dispatch(evento, handlers)
+    dispatch(event, handlers)
 
     // Assert
-    expect(handlerRecusado).toHaveBeenCalledOnce()
-    expect(handlerRecusado).toHaveBeenCalledWith(evento.payload)
-    expect(handlerAprovado).not.toHaveBeenCalled()
+    expect(failedHandler).toHaveBeenCalledOnce()
+    expect(failedHandler).toHaveBeenCalledWith(event.payload)
+    expect(approvedHandler).not.toHaveBeenCalled()
   })
 })

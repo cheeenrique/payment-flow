@@ -34,10 +34,10 @@ describe('charges.store', () => {
     it('substitui cobrança existente pelo mesmo id', () => {
       const store = useChargesStore()
       const original = chargeFactory({ id: 'charge-1', status: 'pending' })
-      const atualizada = chargeFactory({ id: 'charge-1', status: 'paid' })
+      const updated = chargeFactory({ id: 'charge-1', status: 'paid' })
 
       store.upsert(original)
-      store.upsert(atualizada)
+      store.upsert(updated)
 
       expect(store.list).toHaveLength(1)
       expect(store.list[0].status).toBe('paid')
@@ -47,11 +47,11 @@ describe('charges.store', () => {
       const store = useChargesStore()
       const charge1 = chargeFactory({ id: 'charge-1' })
       const charge2 = chargeFactory({ id: 'charge-2' })
-      const charge1Atualizada = chargeFactory({ id: 'charge-1', status: 'paid' })
+      const updatedCharge1 = chargeFactory({ id: 'charge-1', status: 'paid' })
 
       store.upsert(charge1)
       store.upsert(charge2)
-      store.upsert(charge1Atualizada)
+      store.upsert(updatedCharge1)
 
       expect(store.list).toHaveLength(2)
       expect(store.list.find(c => c.id === 'charge-2')).toEqual(charge2)
@@ -63,11 +63,11 @@ describe('charges.store', () => {
       const store = useChargesStore()
       store.upsert(chargeFactory({ id: 'charge-antigo' }))
 
-      const novaLista = [
+      const newList = [
         chargeFactory({ id: 'charge-a' }),
         chargeFactory({ id: 'charge-b' }),
       ]
-      store.set(novaLista)
+      store.set(newList)
 
       expect(store.list).toHaveLength(2)
       expect(store.list[0].id).toBe('charge-a')

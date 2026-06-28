@@ -70,11 +70,11 @@ describe('list', () => {
 
 describe('create', () => {
   it('chama POST /charges e retorna a cobrança desempacotada', async () => {
-    const novaCobranca = makeCharge({ id: 'chg_novo' })
+    const newCharge = makeCharge({ id: 'chg_novo' })
 
     // Simula resposta da API após criação
     mockPost.mockResolvedValueOnce({
-      data: { data: novaCobranca, meta: {} },
+      data: { data: newCharge, meta: {} },
     })
 
     const dto = {
@@ -87,15 +87,15 @@ describe('create', () => {
     const result = await create(dto)
 
     expect(mockPost).toHaveBeenCalledWith('/charges', dto)
-    expect(result).toEqual(novaCobranca)
+    expect(result).toEqual(newCharge)
   })
 
   it('não exige paymentLinkToken na resposta (Fase 2)', async () => {
-    const cobrancaSemToken = makeCharge()
+    const chargeWithoutToken = makeCharge()
     // paymentLinkToken ausente — não deve quebrar o desempacotamento
 
     mockPost.mockResolvedValueOnce({
-      data: { data: cobrancaSemToken, meta: {} },
+      data: { data: chargeWithoutToken, meta: {} },
     })
 
     const result = await create({
@@ -105,7 +105,7 @@ describe('create', () => {
     })
 
     expect(result).not.toHaveProperty('paymentLinkToken')
-    expect(result.id).toBe(cobrancaSemToken.id)
+    expect(result.id).toBe(chargeWithoutToken.id)
   })
 })
 

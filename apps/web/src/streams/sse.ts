@@ -15,27 +15,27 @@ const RECONNECT_BASE_MS = 1_000
  * - URL: `${VITE_API_URL}/events/stream?token=<jwt>`
  * - Cada mensagem é deserializada e despachada via `dispatch`
  * - Em caso de erro, a conexão é fechada e reconectada com backoff exponencial
- *   limitado a `min(1000 * tentativas, 10000)` ms
+ *   limitado a `min(1000 * attempts, 10000)` ms
  */
 export function createEventStream(
   token: string,
   handlers: EventHandlerMap,
 ): EventStreamHandle {
   const baseUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3100'
-  let tentativas = 0
+  let attempts = 0
   let source: EventSource | null = null
-  let encerrado = false
+  let closed = false
 
-  function conectar(): void {
-    if (encerrado) return
+  function connect(): void {
+    if (closed) return
 
     const url = `${baseUrl}/events/stream?token=${encodeURIComponent(token)}`
     source = new EventSource(url)
 
-    source.onmessage = (evento: MessageEvent): void => {
+    source.onmessage = (event: MessageEvent): void => {
       try {
-        const dados = JSON.parse(evento.data) as SseEvent
-        dispatch(dados, handlers)
+        const data = JSON.parse(event.data) as SseEvent
+        dispatch(data, handlers)
       } catch {
         // Mensagem malformada — ignora sem derrubar a conexão
       }
@@ -45,24 +45,24 @@ export function createEventStream(
       source?.close()
       source = null
 
-      if (encerrado) return
+      if (closed) return
 
-      tentativas += 1
-      const atraso = Math.min(RECONNECT_BASE_MS * tentativas, RECONNECT_MAX_MS)
-      setTimeout(conectar, atraso)
+      attempts += 1
+      const delay = Math.min(RECONNECT_BASE_MS * attempts, RECONNECT_MAX_MS)
+      setTimeout(connect, delay)
     }
 
     source.onopen = (): void => {
       // Reconectou com sucesso — reseta contador de tentativas
-      tentativas = 0
+      attempts = 0
     }
   }
 
-  conectar()
+  connect()
 
   return {
     close(): void {
-      encerrado = true
+      closed = true
       source?.close()
       source = null
     },

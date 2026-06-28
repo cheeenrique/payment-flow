@@ -91,7 +91,7 @@ describe('auth.store', () => {
     })
 
     it('popula user via getMe após login bem-sucedido', async () => {
-      const usuario = {
+      const user = {
         id: 'user-1',
         email: 'user@test.com',
         roles: ['admin'],
@@ -101,13 +101,13 @@ describe('auth.store', () => {
         accessToken: 'token-123',
         refreshToken: 'refresh-abc',
       })
-      vi.mocked(authService.getMe).mockResolvedValue(usuario)
+      vi.mocked(authService.getMe).mockResolvedValue(user)
 
       const store = useAuthStore()
       await store.login('user@test.com', 'senha123')
 
       expect(authService.getMe).toHaveBeenCalledOnce()
-      expect(store.user).toEqual(usuario)
+      expect(store.user).toEqual(user)
     })
 
     it('reverte token quando getMe falha após postLogin', async () => {
@@ -174,7 +174,7 @@ describe('auth.store', () => {
 
   describe('loadMe', () => {
     it('popula store.user com o retorno de getMe', async () => {
-      const usuario = {
+      const user = {
         id: 'user-42',
         email: 'carla@test.com',
         roles: ['editor'],
@@ -182,12 +182,12 @@ describe('auth.store', () => {
       }
       // Simula token já presente para que loadMe possa ser chamado isoladamente
       localStorageStore['accessToken'] = 'token-existente'
-      vi.mocked(authService.getMe).mockResolvedValue(usuario)
+      vi.mocked(authService.getMe).mockResolvedValue(user)
 
       const store = useAuthStore()
       await store.loadMe()
 
-      expect(store.user).toEqual(usuario)
+      expect(store.user).toEqual(user)
     })
   })
 

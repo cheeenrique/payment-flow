@@ -6,7 +6,7 @@ import type { EventBusService } from '@/infra/messaging/event-bus.service';
 import { Roles } from '@/modules/auth/domain/rbac/roles';
 
 /** Fábrica de mocks para os colaboradores do use case */
-function criarMocks() {
+function makeMocks() {
   const userRepo: jest.Mocked<IUserRepository> = {
     create: jest.fn().mockResolvedValue(undefined),
     findById: jest.fn().mockResolvedValue(null),
@@ -26,7 +26,7 @@ function criarMocks() {
   return { userRepo, passwordHasher, eventBus };
 }
 
-const inputValido: RegisterInput = {
+const validInput: RegisterInput = {
   name: 'Carlos Teste',
   email: 'carlos@example.com',
   password: 'senha-segura-123',
@@ -35,32 +35,32 @@ const inputValido: RegisterInput = {
 describe('RegisterUseCase', () => {
   describe('registro bem-sucedido', () => {
     it('retorna id, name, email e roles do usuário criado', async () => {
-      const { userRepo, passwordHasher, eventBus } = criarMocks();
+      const { userRepo, passwordHasher, eventBus } = makeMocks();
       const useCase = new RegisterUseCase(userRepo, passwordHasher, eventBus);
 
-      const output = await useCase.execute(inputValido);
+      const output = await useCase.execute(validInput);
 
       expect(output.id).toBeTruthy();
-      expect(output.name).toBe(inputValido.name);
+      expect(output.name).toBe(validInput.name);
       expect(output.email).toBe('carlos@example.com');
       expect(output.roles).toContain(Roles.Viewer);
     });
 
     it('nunca inclui senha no retorno', async () => {
-      const { userRepo, passwordHasher, eventBus } = criarMocks();
+      const { userRepo, passwordHasher, eventBus } = makeMocks();
       const useCase = new RegisterUseCase(userRepo, passwordHasher, eventBus);
 
-      const output = await useCase.execute(inputValido);
+      const output = await useCase.execute(validInput);
 
       expect((output as unknown as Record<string, unknown>)['password']).toBeUndefined();
       expect((output as unknown as Record<string, unknown>)['passwordHash']).toBeUndefined();
     });
 
     it('normaliza email para lowercase e trim antes de salvar', async () => {
-      const { userRepo, passwordHasher, eventBus } = criarMocks();
+      const { userRepo, passwordHasher, eventBus } = makeMocks();
       const useCase = new RegisterUseCase(userRepo, passwordHasher, eventBus);
 
-      await useCase.execute({ ...inputValido, email: '  CARLOS@EXAMPLE.COM  ' });
+      await useCase.execute({ ...validInput, email: '  CARLOS@EXAMPLE.COM  ' });
 
       // Verifica que o repositório foi consultado e chamado com o email normalizado
       expect(userRepo.findByEmail).toHaveBeenCalledWith('carlos@example.com');
@@ -70,31 +70,31 @@ describe('RegisterUseCase', () => {
     });
 
     it('faz hash da senha antes de persistir', async () => {
-      const { userRepo, passwordHasher, eventBus } = criarMocks();
+      const { userRepo, passwordHasher, eventBus } = makeMocks();
       const useCase = new RegisterUseCase(userRepo, passwordHasher, eventBus);
 
-      await useCase.execute(inputValido);
+      await useCase.execute(validInput);
 
-      expect(passwordHasher.hash).toHaveBeenCalledWith(inputValido.password);
+      expect(passwordHasher.hash).toHaveBeenCalledWith(validInput.password);
       expect(userRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({ passwordHash: '$2b$10$hashed' }),
       );
     });
 
     it('persiste o usuário no repositório uma única vez', async () => {
-      const { userRepo, passwordHasher, eventBus } = criarMocks();
+      const { userRepo, passwordHasher, eventBus } = makeMocks();
       const useCase = new RegisterUseCase(userRepo, passwordHasher, eventBus);
 
-      await useCase.execute(inputValido);
+      await useCase.execute(validInput);
 
       expect(userRepo.create).toHaveBeenCalledTimes(1);
     });
 
     it('publica evento UserRegisteredEvent no eventBus', async () => {
-      const { userRepo, passwordHasher, eventBus } = criarMocks();
+      const { userRepo, passwordHasher, eventBus } = makeMocks();
       const useCase = new RegisterUseCase(userRepo, passwordHasher, eventBus);
 
-      await useCase.execute(inputValido);
+      await useCase.execute(validInput);
 
       expect(eventBus.publish).toHaveBeenCalledTimes(1);
       expect(eventBus.publish).toHaveBeenCalledWith(
@@ -103,10 +103,10 @@ describe('RegisterUseCase', () => {
     });
 
     it('atribui papel viewer por padrão (sem papéis informados)', async () => {
-      const { userRepo, passwordHasher, eventBus } = criarMocks();
+      const { userRepo, passwordHasher, eventBus } = makeMocks();
       const useCase = new RegisterUseCase(userRepo, passwordHasher, eventBus);
 
-      const output = await useCase.execute(inputValido);
+      const output = await useCase.execute(validInput);
 
       expect(output.roles).toEqual([Roles.Viewer]);
     });
@@ -114,7 +114,7 @@ describe('RegisterUseCase', () => {
 
   describe('email duplicado', () => {
     it('lança ConflictError quando o email já está em uso', async () => {
-      const { userRepo, passwordHasher, eventBus } = criarMocks();
+      const { userRepo, passwordHasher, eventBus } = makeMocks();
       // Simula usuário existente
       userRepo.findByEmail.mockResolvedValue({
         id: 'existing-id',
@@ -127,15 +127,15 @@ describe('RegisterUseCase', () => {
       } as never);
       const useCase = new RegisterUseCase(userRepo, passwordHasher, eventBus);
 
-      await expect(useCase.execute(inputValido)).rejects.toThrow(ConflictError);
+      await expect(useCase.execute(validInput)).rejects.toThrow(ConflictError);
     });
 
     it('não persiste nem faz hash quando email está duplicado', async () => {
-      const { userRepo, passwordHasher, eventBus } = criarMocks();
+      const { userRepo, passwordHasher, eventBus } = makeMocks();
       userRepo.findByEmail.mockResolvedValue({ id: 'existing' } as never);
       const useCase = new RegisterUseCase(userRepo, passwordHasher, eventBus);
 
-      await expect(useCase.execute(inputValido)).rejects.toThrow(ConflictError);
+      await expect(useCase.execute(validInput)).rejects.toThrow(ConflictError);
 
       expect(passwordHasher.hash).not.toHaveBeenCalled();
       expect(userRepo.create).not.toHaveBeenCalled();
@@ -143,11 +143,11 @@ describe('RegisterUseCase', () => {
     });
 
     it('ConflictError usa código CONFLICT e statusCode 409', async () => {
-      const { userRepo, passwordHasher, eventBus } = criarMocks();
+      const { userRepo, passwordHasher, eventBus } = makeMocks();
       userRepo.findByEmail.mockResolvedValue({ id: 'existing' } as never);
       const useCase = new RegisterUseCase(userRepo, passwordHasher, eventBus);
 
-      const err = await useCase.execute(inputValido).catch((e) => e);
+      const err = await useCase.execute(validInput).catch((e) => e);
 
       expect(err.code).toBe('CONFLICT');
       expect(err.statusCode).toBe(409);

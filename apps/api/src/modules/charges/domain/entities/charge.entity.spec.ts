@@ -10,34 +10,34 @@ const baseProps = {
   expiresAt: new Date(Date.now() + 86_400_000), // +1 dia
 };
 
-function criarCobranca(overrides: Partial<typeof baseProps> = {}): Charge {
+function makeCharge(overrides: Partial<typeof baseProps> = {}): Charge {
   return Charge.create({ ...baseProps, ...overrides });
 }
 
 describe('Charge.create', () => {
   it('cria cobrança com status inicial pending', () => {
-    const charge = criarCobranca();
+    const charge = makeCharge();
 
     expect(charge.status).toBe(ChargeStatus.PENDING);
   });
 
   it('gera id único (uuid) em cada criação', () => {
-    const c1 = criarCobranca();
-    const c2 = criarCobranca();
+    const c1 = makeCharge();
+    const c2 = makeCharge();
 
     expect(c1.id).toBeTruthy();
     expect(c1.id).not.toBe(c2.id);
   });
 
   it('define createdAt e updatedAt como Date', () => {
-    const charge = criarCobranca();
+    const charge = makeCharge();
 
     expect(charge.createdAt).toBeInstanceOf(Date);
     expect(charge.updatedAt).toBeInstanceOf(Date);
   });
 
   it('preserva amount, currency e description fornecidos', () => {
-    const charge = criarCobranca();
+    const charge = makeCharge();
 
     expect(charge.amount).toBe(10000);
     expect(charge.currency).toBe('BRL');
@@ -47,7 +47,7 @@ describe('Charge.create', () => {
 
 describe('Charge.isTerminal', () => {
   it('retorna false para status pending', () => {
-    const charge = criarCobranca();
+    const charge = makeCharge();
     expect(charge.isTerminal()).toBe(false);
   });
 
@@ -64,7 +64,7 @@ describe('Charge.isTerminal', () => {
 
 describe('Charge.canBeCanceled', () => {
   it('retorna true para status pending', () => {
-    const charge = criarCobranca();
+    const charge = makeCharge();
     expect(charge.canBeCanceled()).toBe(true);
   });
 
@@ -81,7 +81,7 @@ describe('Charge.canBeCanceled', () => {
 
 describe('Charge.markAsPaid', () => {
   it('transita de pending para paid com sucesso', () => {
-    const charge = criarCobranca();
+    const charge = makeCharge();
     const paid = charge.markAsPaid();
 
     expect(paid.status).toBe(ChargeStatus.PAID);
@@ -95,7 +95,7 @@ describe('Charge.markAsPaid', () => {
   });
 
   it('não muta a instância original', () => {
-    const charge = criarCobranca();
+    const charge = makeCharge();
     const paid = charge.markAsPaid();
 
     expect(charge.status).toBe(ChargeStatus.PENDING);
@@ -104,7 +104,7 @@ describe('Charge.markAsPaid', () => {
 
   it('renova updatedAt na transição', () => {
     const before = new Date();
-    const charge = criarCobranca();
+    const charge = makeCharge();
     const paid = charge.markAsPaid();
 
     expect(paid.updatedAt.getTime()).toBeGreaterThanOrEqual(before.getTime());
@@ -127,14 +127,14 @@ describe('Charge.markAsPaid', () => {
 
 describe('Charge.markAsFailed', () => {
   it('transita de pending para failed com sucesso', () => {
-    const charge = criarCobranca();
+    const charge = makeCharge();
     const failed = charge.markAsFailed();
 
     expect(failed.status).toBe(ChargeStatus.FAILED);
   });
 
   it('não muta a instância original', () => {
-    const charge = criarCobranca();
+    const charge = makeCharge();
     const failed = charge.markAsFailed();
 
     expect(charge.status).toBe(ChargeStatus.PENDING);
@@ -150,14 +150,14 @@ describe('Charge.markAsFailed', () => {
 
 describe('Charge.cancel', () => {
   it('transita de pending para canceled sem guarda (uso interno)', () => {
-    const charge = criarCobranca();
+    const charge = makeCharge();
     const canceled = charge.cancel();
 
     expect(canceled.status).toBe(ChargeStatus.CANCELED);
   });
 
   it('não muta a instância original', () => {
-    const charge = criarCobranca();
+    const charge = makeCharge();
     charge.cancel();
 
     expect(charge.status).toBe(ChargeStatus.PENDING);
@@ -166,7 +166,7 @@ describe('Charge.cancel', () => {
 
 describe('Charge.canExpire', () => {
   it('retorna true para status pending', () => {
-    const charge = criarCobranca();
+    const charge = makeCharge();
 
     expect(charge.canExpire()).toBe(true);
   });
@@ -191,7 +191,7 @@ describe('Charge.canExpire', () => {
 
 describe('Charge.expire', () => {
   it('transita de pending para expired sem guarda (uso interno via use case)', () => {
-    const charge = criarCobranca();
+    const charge = makeCharge();
     const expired = charge.expire();
 
     expect(expired.status).toBe(ChargeStatus.EXPIRED);
@@ -205,7 +205,7 @@ describe('Charge.expire', () => {
   });
 
   it('não muta a instância original', () => {
-    const charge = criarCobranca();
+    const charge = makeCharge();
     const expired = charge.expire();
 
     expect(charge.status).toBe(ChargeStatus.PENDING);
@@ -214,7 +214,7 @@ describe('Charge.expire', () => {
 
   it('renova updatedAt na transição', () => {
     const before = new Date();
-    const charge = criarCobranca();
+    const charge = makeCharge();
     const expired = charge.expire();
 
     expect(expired.updatedAt.getTime()).toBeGreaterThanOrEqual(before.getTime());
@@ -223,7 +223,7 @@ describe('Charge.expire', () => {
 
 describe('Charge.markAsExpired', () => {
   it('transita de pending para expired com guarda', () => {
-    const charge = criarCobranca();
+    const charge = makeCharge();
     const expired = charge.markAsExpired();
 
     expect(expired.status).toBe(ChargeStatus.EXPIRED);
@@ -237,7 +237,7 @@ describe('Charge.markAsExpired', () => {
   });
 
   it('não muta a instância original', () => {
-    const charge = criarCobranca();
+    const charge = makeCharge();
     const expired = charge.markAsExpired();
 
     expect(charge.status).toBe(ChargeStatus.PENDING);

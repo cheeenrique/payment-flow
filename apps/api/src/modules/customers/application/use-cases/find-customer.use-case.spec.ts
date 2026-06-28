@@ -3,7 +3,7 @@ import { NotFoundError } from '@/shared/errors/not-found.error';
 import type { ICustomerRepository } from '@/modules/customers/domain/repositories/customer-repository.interface';
 import { Customer } from '@/modules/customers/domain/entities/customer.entity';
 
-function criarRepo(cliente: Customer | null): jest.Mocked<ICustomerRepository> {
+function makeRepo(cliente: Customer | null): jest.Mocked<ICustomerRepository> {
   return {
     create: jest.fn(),
     findById: jest.fn().mockResolvedValue(cliente),
@@ -13,7 +13,7 @@ function criarRepo(cliente: Customer | null): jest.Mocked<ICustomerRepository> {
   };
 }
 
-const clienteFake = Customer.create({
+const fakeCustomer = Customer.create({
   name: 'Pedro Alves',
   email: 'pedro@example.com',
   document: '111.222.333-44',
@@ -23,31 +23,31 @@ const clienteFake = Customer.create({
 describe('FindCustomerUseCase', () => {
   describe('cliente encontrado', () => {
     it('retorna os dados do cliente quando id existe no repositório', async () => {
-      const repo = criarRepo(clienteFake);
+      const repo = makeRepo(fakeCustomer);
       const useCase = new FindCustomerUseCase(repo);
 
-      const output = await useCase.execute(clienteFake.id);
+      const output = await useCase.execute(fakeCustomer.id);
 
-      expect(output.id).toBe(clienteFake.id);
-      expect(output.name).toBe(clienteFake.name);
-      expect(output.email).toBe(clienteFake.email);
-      expect(output.document).toBe(clienteFake.document);
-      expect(output.phone).toBe(clienteFake.phone);
+      expect(output.id).toBe(fakeCustomer.id);
+      expect(output.name).toBe(fakeCustomer.name);
+      expect(output.email).toBe(fakeCustomer.email);
+      expect(output.document).toBe(fakeCustomer.document);
+      expect(output.phone).toBe(fakeCustomer.phone);
       expect(output.status).toBe('active');
     });
 
     it('retorna createdAt e updatedAt como Date', async () => {
-      const repo = criarRepo(clienteFake);
+      const repo = makeRepo(fakeCustomer);
       const useCase = new FindCustomerUseCase(repo);
 
-      const output = await useCase.execute(clienteFake.id);
+      const output = await useCase.execute(fakeCustomer.id);
 
       expect(output.createdAt).toBeInstanceOf(Date);
       expect(output.updatedAt).toBeInstanceOf(Date);
     });
 
     it('consulta o repositório com o id fornecido', async () => {
-      const repo = criarRepo(clienteFake);
+      const repo = makeRepo(fakeCustomer);
       const useCase = new FindCustomerUseCase(repo);
 
       await useCase.execute('id-qualquer');
@@ -58,14 +58,14 @@ describe('FindCustomerUseCase', () => {
 
   describe('cliente não encontrado', () => {
     it('lança NotFoundError quando id não existe', async () => {
-      const repo = criarRepo(null);
+      const repo = makeRepo(null);
       const useCase = new FindCustomerUseCase(repo);
 
       await expect(useCase.execute('id-inexistente')).rejects.toThrow(NotFoundError);
     });
 
     it('NotFoundError usa código NOT_FOUND e statusCode 404', async () => {
-      const repo = criarRepo(null);
+      const repo = makeRepo(null);
       const useCase = new FindCustomerUseCase(repo);
 
       const err = await useCase.execute('id-inexistente').catch((e) => e);
@@ -75,7 +75,7 @@ describe('FindCustomerUseCase', () => {
     });
 
     it('NotFoundError inclui o id consultado no context', async () => {
-      const repo = criarRepo(null);
+      const repo = makeRepo(null);
       const useCase = new FindCustomerUseCase(repo);
 
       const err = await useCase.execute('meu-id').catch((e) => e);
