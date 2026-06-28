@@ -14,13 +14,21 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => accessToken.value !== null)
 
   /**
-   * Realiza login: obtém token, persiste e carrega perfil do usuário
+   * Realiza login: obtém token, persiste e carrega perfil do usuário.
+   * Operação atômica — se getMe falhar após postLogin, reverte o token
+   * para evitar sessão parcialmente inicializada (isAuthenticated=true, user=null).
    */
   async function login(email: string, password: string): Promise<void> {
     const response = await authService.postLogin(email, password)
     accessToken.value = response.accessToken
     localStorage.setItem('accessToken', response.accessToken)
-    await loadMe()
+    try {
+      await loadMe()
+    } catch (err) {
+      // Reverte estado ao falhar no carregamento do perfil
+      logout()
+      throw err
+    }
   }
 
   /**
