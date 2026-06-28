@@ -10,7 +10,8 @@ const baseChargeProps = {
   customerId: 'customer-uuid',
   amount: 10000,
   currency: 'BRL',
-  paymentMethod: PaymentMethod.PIX,
+  paymentMethod: PaymentMethod.PIX as PaymentMethod | null,
+  paymentLinkToken: 'aaaaaaaabbbbbbbbcccccccc00000001',
   expiresAt: new Date(Date.now() - 3600_000), // vencida há 1 hora
   createdAt: new Date(),
   updatedAt: new Date(),

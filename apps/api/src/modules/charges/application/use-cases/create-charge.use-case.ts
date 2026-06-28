@@ -23,7 +23,7 @@ export interface CreateChargeOutput {
   currency: string;
   description?: string;
   status: string;
-  paymentMethod: string;
+  paymentMethod: string | null;
   expiresAt: Date;
   createdAt: Date;
   updatedAt: Date;

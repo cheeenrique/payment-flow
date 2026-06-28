@@ -32,9 +32,13 @@ export class ChargeModel {
   @Prop({ required: true, index: true })
   status!: string;
 
-  /** Método de pagamento: pix | boleto | credit_card */
-  @Prop({ required: true })
-  paymentMethod!: string;
+  /** Token único de link de pagamento — gerado no domínio, imutável */
+  @Prop({ required: true, unique: true })
+  paymentLinkToken!: string;
+
+  /** Método de pagamento: pix | boleto | credit_card — null até seleção pelo cliente */
+  @Prop({ required: false, default: null })
+  paymentMethod?: string | null;
 
   /** Data/hora de expiração da cobrança */
   @Prop({ required: true })
@@ -46,3 +50,5 @@ export const ChargeSchema = SchemaFactory.createForClass(ChargeModel);
 
 // Índice composto para o scheduler de expiração: busca status abertos com expiresAt vencido
 ChargeSchema.index({ status: 1, expiresAt: 1 });
+// Índice único para lookup de cobranças via link de pagamento
+ChargeSchema.index({ paymentLinkToken: 1 }, { unique: true });

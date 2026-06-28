@@ -6,7 +6,7 @@ interface ChargeCreatedPayload {
   customerId: string;
   amount: number;
   currency: string;
-  paymentMethod: string;
+  paymentMethod: string | null;
   status: string;
   expiresAt: Date;
 }

@@ -6,12 +6,15 @@ const baseProps = {
   amount: 10000,
   currency: 'BRL',
   description: 'Cobrança de teste',
-  paymentMethod: PaymentMethod.PIX,
+  paymentMethod: PaymentMethod.PIX as PaymentMethod | null,
   expiresAt: new Date(Date.now() + 86_400_000), // +1 dia
+  paymentLinkToken: 'aaaaaaaabbbbbbbbcccccccc00000001',
 };
 
-function makeCharge(overrides: Partial<typeof baseProps> = {}): Charge {
-  return Charge.create({ ...baseProps, ...overrides });
+function makeCharge(overrides: Partial<Omit<typeof baseProps, 'paymentLinkToken'>> = {}): Charge {
+  // paymentLinkToken é gerado internamente por Charge.create() — não faz parte do input
+  const { paymentLinkToken: _tok, ...createProps } = { ...baseProps, ...overrides };
+  return Charge.create(createProps);
 }
 
 describe('Charge.create', () => {
@@ -265,6 +268,112 @@ describe('Charge.markAsExpired', () => {
 
     expect(() => charge.markAsExpired()).toThrow(
       expect.objectContaining({ code: 'CONFLICT', context: expect.objectContaining({ currentStatus: ChargeStatus.PAID }) }),
+    );
+  });
+});
+
+describe('Charge.create — paymentLinkToken', () => {
+  it('gera token de 32 caracteres alfanuméricos sem hífens', () => {
+    const charge = makeCharge();
+
+    expect(charge.paymentLinkToken).toMatch(/^[a-f0-9]{32}$/);
+  });
+
+  it('gera token único por criação', () => {
+    const c1 = makeCharge();
+    const c2 = makeCharge();
+
+    expect(c1.paymentLinkToken).not.toBe(c2.paymentLinkToken);
+  });
+
+  it('paymentMethod é null quando não fornecido', () => {
+    const charge = Charge.create({
+      customerId: 'customer-uuid',
+      amount: 10000,
+      currency: 'BRL',
+      expiresAt: new Date(Date.now() + 86_400_000),
+    });
+
+    expect(charge.paymentMethod).toBeNull();
+  });
+});
+
+describe('Charge.selectMethodAndRequestPayment', () => {
+  it('sucesso: cobrança pending com método null → paymentMethod=PIX, status=AWAITING_PAYMENT, paymentLinkToken preservado, original não mutado', () => {
+    const charge = Charge.create({
+      customerId: 'customer-uuid',
+      amount: 10000,
+      currency: 'BRL',
+      expiresAt: new Date(Date.now() + 86_400_000),
+    });
+    const originalToken = charge.paymentLinkToken;
+    const result = charge.selectMethodAndRequestPayment(PaymentMethod.PIX);
+
+    expect(result.paymentMethod).toBe(PaymentMethod.PIX);
+    expect(result.status).toBe(ChargeStatus.AWAITING_PAYMENT);
+    expect(result.paymentLinkToken).toBe(originalToken);
+    expect(charge.status).toBe(ChargeStatus.PENDING);
+    expect(result).not.toBe(charge);
+  });
+
+  it('sucesso: cobrança awaiting_payment com método null → paymentMethod=PIX, status=AWAITING_PAYMENT', () => {
+    const charge = new Charge({
+      ...baseProps,
+      id: 'charge-id',
+      paymentMethod: null,
+      status: ChargeStatus.AWAITING_PAYMENT,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    const result = charge.selectMethodAndRequestPayment(PaymentMethod.PIX);
+
+    expect(result.paymentMethod).toBe(PaymentMethod.PIX);
+    expect(result.status).toBe(ChargeStatus.AWAITING_PAYMENT);
+  });
+
+  it('guarda terminal: cobrança paga lança ConflictError', () => {
+    const charge = new Charge({
+      ...baseProps,
+      id: 'charge-id',
+      paymentMethod: null,
+      status: ChargeStatus.PAID,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    expect(() => charge.selectMethodAndRequestPayment(PaymentMethod.PIX)).toThrow(ConflictError);
+  });
+
+  it('guarda já definido: método já definido lança ConflictError', () => {
+    const charge = new Charge({
+      ...baseProps,
+      id: 'charge-id',
+      status: ChargeStatus.PENDING,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    expect(() => charge.selectMethodAndRequestPayment(PaymentMethod.BOLETO)).toThrow(ConflictError);
+  });
+
+  it('ConflictError tem code CONFLICT e context com chargeId e currentStatus', () => {
+    const charge = new Charge({
+      ...baseProps,
+      id: 'test-charge-id',
+      paymentMethod: null,
+      status: ChargeStatus.PAID,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    expect(() => charge.selectMethodAndRequestPayment(PaymentMethod.PIX)).toThrow(
+      expect.objectContaining({
+        code: 'CONFLICT',
+        context: expect.objectContaining({
+          chargeId: 'test-charge-id',
+          currentStatus: ChargeStatus.PAID,
+        }),
+      }),
     );
   });
 });
