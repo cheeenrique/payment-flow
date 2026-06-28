@@ -46,7 +46,7 @@ describe('ChargeExpirationScheduler', () => {
       const { chargeRepo, expireChargeUseCase } = makeMocks([]);
       const scheduler = new ChargeExpirationScheduler(chargeRepo, expireChargeUseCase);
 
-      await scheduler.expirarCobrancastVencidas();
+      await scheduler.expireOverdueCharges();
 
       expect(expireChargeUseCase.execute).not.toHaveBeenCalled();
     });
@@ -55,7 +55,7 @@ describe('ChargeExpirationScheduler', () => {
       const { chargeRepo, expireChargeUseCase } = makeMocks([]);
       const scheduler = new ChargeExpirationScheduler(chargeRepo, expireChargeUseCase);
 
-      await scheduler.expirarCobrancastVencidas();
+      await scheduler.expireOverdueCharges();
 
       expect(chargeRepo.findExpirable).toHaveBeenCalledTimes(1);
       expect(chargeRepo.findExpirable).toHaveBeenCalledWith(expect.any(Date), BATCH_LIMIT);
@@ -65,7 +65,7 @@ describe('ChargeExpirationScheduler', () => {
       const { chargeRepo, expireChargeUseCase } = makeMocks([]);
       const scheduler = new ChargeExpirationScheduler(chargeRepo, expireChargeUseCase);
 
-      await expect(scheduler.expirarCobrancastVencidas()).resolves.toBeUndefined();
+      await expect(scheduler.expireOverdueCharges()).resolves.toBeUndefined();
     });
   });
 
@@ -75,7 +75,7 @@ describe('ChargeExpirationScheduler', () => {
       const { chargeRepo, expireChargeUseCase } = makeMocks(charges);
       const scheduler = new ChargeExpirationScheduler(chargeRepo, expireChargeUseCase);
 
-      await scheduler.expirarCobrancastVencidas();
+      await scheduler.expireOverdueCharges();
 
       expect(expireChargeUseCase.execute).toHaveBeenCalledTimes(3);
       expect(expireChargeUseCase.execute).toHaveBeenCalledWith('id-1');
@@ -95,7 +95,7 @@ describe('ChargeExpirationScheduler', () => {
 
       const scheduler = new ChargeExpirationScheduler(chargeRepo, expireChargeUseCase);
 
-      await expect(scheduler.expirarCobrancastVencidas()).resolves.toBeUndefined();
+      await expect(scheduler.expireOverdueCharges()).resolves.toBeUndefined();
       expect(expireChargeUseCase.execute).toHaveBeenCalledTimes(3);
     });
 
@@ -109,7 +109,7 @@ describe('ChargeExpirationScheduler', () => {
 
       const scheduler = new ChargeExpirationScheduler(chargeRepo, expireChargeUseCase);
 
-      await expect(scheduler.expirarCobrancastVencidas()).resolves.toBeUndefined();
+      await expect(scheduler.expireOverdueCharges()).resolves.toBeUndefined();
       expect(expireChargeUseCase.execute).toHaveBeenCalledTimes(2);
     });
 
@@ -125,7 +125,7 @@ describe('ChargeExpirationScheduler', () => {
       const scheduler = new ChargeExpirationScheduler(chargeRepo, expireChargeUseCase);
 
       // Promise.allSettled garante que o método resolve mesmo com falha parcial
-      await expect(scheduler.expirarCobrancastVencidas()).resolves.toBeUndefined();
+      await expect(scheduler.expireOverdueCharges()).resolves.toBeUndefined();
       expect(expireChargeUseCase.execute).toHaveBeenCalledTimes(3);
     });
   });
@@ -138,7 +138,7 @@ describe('ChargeExpirationScheduler', () => {
       const { chargeRepo, expireChargeUseCase } = makeMocks(charges);
       const scheduler = new ChargeExpirationScheduler(chargeRepo, expireChargeUseCase);
 
-      await expect(scheduler.expirarCobrancastVencidas()).resolves.toBeUndefined();
+      await expect(scheduler.expireOverdueCharges()).resolves.toBeUndefined();
       expect(expireChargeUseCase.execute).toHaveBeenCalledTimes(BATCH_LIMIT);
     });
   });

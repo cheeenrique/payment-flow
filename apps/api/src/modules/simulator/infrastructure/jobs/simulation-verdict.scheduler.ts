@@ -41,7 +41,7 @@ export class SimulationVerdictScheduler {
   ) {}
 
   @Cron(CronExpression.EVERY_10_SECONDS)
-  async processarVereditosPendentes(): Promise<void> {
+  async processPendingVerdicts(): Promise<void> {
     const now = new Date();
     const verdicts = await this.verdictRepo.findDue(now, SimulationVerdictScheduler.BATCH_LIMIT);
 
@@ -58,7 +58,7 @@ export class SimulationVerdictScheduler {
 
     // Promise.allSettled garante que uma falha individual não interrompe o lote
     const resultados = await Promise.allSettled(
-      verdicts.map((verdict) => this.processarUm(verdict)),
+      verdicts.map((verdict) => this.processOne(verdict)),
     );
 
     const falhas = resultados.filter((r) => r.status === 'rejected').length;
@@ -68,9 +68,9 @@ export class SimulationVerdictScheduler {
   }
 
   /** Emite o veredito e marca como processado — permanece pending se a emissão falhar */
-  private async processarUm(verdict: ScheduledVerdict): Promise<void> {
+  private async processOne(verdict: ScheduledVerdict): Promise<void> {
     try {
-      this.emitirVeredito(verdict);
+      this.emitVerdict(verdict);
       await this.verdictRepo.markProcessed(verdict.id);
       this.logger.log(
         `Veredito processado: paymentId=${verdict.paymentId} outcome=${verdict.outcome}`,
@@ -86,7 +86,7 @@ export class SimulationVerdictScheduler {
   }
 
   /** Publica eventos de integração e SSE conforme o outcome do veredito */
-  private emitirVeredito(verdict: ScheduledVerdict): void {
+  private emitVerdict(verdict: ScheduledVerdict): void {
     if (verdict.outcome === 'approved') {
       this.eventBus.publish(
         new SimulatorPaymentApprovedEvent(
