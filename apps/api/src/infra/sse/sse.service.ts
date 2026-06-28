@@ -26,9 +26,11 @@ export class SseService {
   stream(): Observable<MessageEvent> {
     return this.events$.asObservable().pipe(
       map(
-        (payload): MessageEvent => ({
-          data: { type: payload.type, data: payload.data },
-          type: payload.type,
+        // NÃO define MessageEvent.type: mantém o evento "default" para que o
+        // EventSource.onmessage do frontend dispare. O envelope vai em `data`
+        // como { type, payload }, alinhado com o dispatcher do frontend e as docs.
+        (event): MessageEvent => ({
+          data: { type: event.type, payload: event.data },
         }),
       ),
     );
