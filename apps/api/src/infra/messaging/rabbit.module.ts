@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
-import { ClientsModule, Transport } from '@nestjs/microservices';
+import { ClientProxyFactory, Transport } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
 import { EventBusService } from './event-bus.service';
 import { MessagingSetupService } from './messaging-setup.service';
+import { EVENT_BUS } from './messaging.tokens';
 
-/** Token DI para o ClientProxy RabbitMQ */
-export const EVENT_BUS = 'EVENT_BUS';
+// EVENT_BUS reexportado por compatibilidade com imports existentes.
+export { EVENT_BUS };
 
 /**
  * Argumentos de dead-letter para a fila 'payment-flow'.
@@ -23,11 +24,13 @@ export const PAYMENT_FLOW_QUEUE_ARGS = {
 } as const;
 
 @Module({
-  imports: [
-    ClientsModule.registerAsync([
-      {
-        name: EVENT_BUS,
-        useFactory: (config: ConfigService) => ({
+  providers: [
+    // Provider local do ClientProxy RMQ — token pertence ao RabbitModule,
+    // então resolve nos providers internos e pode ser exportado direto.
+    {
+      provide: EVENT_BUS,
+      useFactory: (config: ConfigService) =>
+        ClientProxyFactory.create({
           transport: Transport.RMQ,
           options: {
             urls: [config.getOrThrow<string>('RABBITMQ_URL')],
@@ -38,11 +41,11 @@ export const PAYMENT_FLOW_QUEUE_ARGS = {
             },
           },
         }),
-        inject: [ConfigService],
-      },
-    ]),
+      inject: [ConfigService],
+    },
+    EventBusService,
+    MessagingSetupService,
   ],
-  providers: [EventBusService, MessagingSetupService],
   exports: [EVENT_BUS, EventBusService],
 })
 export class RabbitModule {}

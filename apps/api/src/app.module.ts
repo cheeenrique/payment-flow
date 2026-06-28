@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
-import { join } from 'node:path';
 import { AppConfigModule } from './config/app-config.module';
 import { DatabaseModule } from './infra/database/database.module';
 import { RabbitModule } from './infra/messaging/rabbit.module';
@@ -29,7 +28,9 @@ import { SimulatorModule } from './modules/simulator/simulator.module';
     // context expõe `req` para os guards GQL extraírem o token do header.
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
-      autoSchemaFile: join(process.cwd(), 'apps/api/src/schema.gql'),
+      // Schema code-first gerado em memória — independente do cwd
+      // (start:prod roda de apps/api, evita path aninhado errado).
+      autoSchemaFile: true,
       sortSchema: true,
       playground: true,
       context: ({ req }: { req: unknown }) => ({ req }),

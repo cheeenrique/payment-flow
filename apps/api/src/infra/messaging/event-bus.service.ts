@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ClientProxy, RmqRecordBuilder } from '@nestjs/microservices';
 import type { IntegrationEvent } from '@/shared/events/integration-event.interface';
-import { EVENT_BUS } from './rabbit.module';
+import { EVENT_BUS } from './messaging.tokens';
 
 /**
  * Publisher que desacopla os módulos de domínio do transporte RabbitMQ.
