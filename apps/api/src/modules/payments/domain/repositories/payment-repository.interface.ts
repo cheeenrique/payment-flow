@@ -16,4 +16,10 @@ export interface IPaymentRepository {
   ): Promise<{ items: Payment[]; total: number }>;
   /** Suporte a idempotência: busca por chave de idempotência */
   findByIdempotencyKey(key: string): Promise<Payment | null>;
+  /**
+   * Retorna o primeiro pagamento ativo (pending ou processing) vinculado a uma cobrança.
+   * Usado pelo consumer de charge.expired.v1 para expirar pagamentos presos.
+   * Retorna null se não houver pagamento ativo para a cobrança.
+   */
+  findActiveByChargeId(chargeId: string): Promise<Payment | null>;
 }

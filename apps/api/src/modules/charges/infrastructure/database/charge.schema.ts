@@ -43,3 +43,6 @@ export class ChargeModel {
 
 export type ChargeDocument = HydratedDocument<ChargeModel>;
 export const ChargeSchema = SchemaFactory.createForClass(ChargeModel);
+
+// Índice composto para o scheduler de expiração: busca status abertos com expiresAt vencido
+ChargeSchema.index({ status: 1, expiresAt: 1 });

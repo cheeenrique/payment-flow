@@ -9,6 +9,12 @@ import type {
 } from '@/modules/charges/domain/repositories/charge-repository.interface';
 import { ChargeModel, ChargeDocument } from '@/modules/charges/infrastructure/database/charge.schema';
 
+/** Status de cobrança que ainda permitem expiração (não terminais) */
+const EXPIRABLE_STATUSES: ChargeStatus[] = [
+  ChargeStatus.PENDING,
+  ChargeStatus.AWAITING_PAYMENT,
+];
+
 /** Tipo intermediário do documento Mongoose após .lean() */
 interface ChargeLean {
   _id: string;
@@ -63,6 +69,19 @@ export class MongoChargeRepository implements IChargeRepository {
     await this.model
       .updateOne({ _id: charge.id }, { $set: this.toPersistence(charge) })
       .exec();
+  }
+
+  async findExpirable(now: Date, limit: number): Promise<Charge[]> {
+    const docs = await this.model
+      .find({
+        status: { $in: EXPIRABLE_STATUSES },
+        expiresAt: { $lt: now },
+      })
+      .limit(limit)
+      .lean<ChargeLean[]>()
+      .exec();
+
+    return docs.map((doc) => this.toDomain(doc));
   }
 
   /** Constrói o objeto de filtro do Mongoose a partir dos critérios de listagem */

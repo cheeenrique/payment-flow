@@ -4,6 +4,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ChargeModel, ChargeSchema } from './infrastructure/database/charge.schema';
 import { MongoChargeRepository } from './infrastructure/repositories/mongo-charge.repository';
 import { PaymentResultConsumer } from './infrastructure/messaging/payment-result.consumer';
+import { ChargeExpirationScheduler } from './infrastructure/jobs/charge-expiration.scheduler';
 
 import { CreateChargeUseCase } from './application/use-cases/create-charge.use-case';
 import { CancelChargeUseCase } from './application/use-cases/cancel-charge.use-case';
@@ -57,6 +58,9 @@ import { CHARGE_REPOSITORY } from './charges.tokens';
     GetChargeUseCase,
     ListChargesUseCase,
     ExpireChargeUseCase,
+
+    // Scheduler de expiração: cron in-process que expira cobranças vencidas
+    ChargeExpirationScheduler,
 
     // Resolver GraphQL code-first (lado de leitura)
     ChargesResolver,

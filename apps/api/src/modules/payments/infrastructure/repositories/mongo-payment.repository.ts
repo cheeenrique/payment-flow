@@ -73,6 +73,15 @@ export class MongoPaymentRepository implements IPaymentRepository {
     return doc ? this.toDomain(doc) : null;
   }
 
+  async findActiveByChargeId(chargeId: string): Promise<Payment | null> {
+    // Busca pagamento em estado não terminal vinculado à cobrança
+    const doc = await this.model
+      .findOne({ chargeId, status: { $in: ['pending', 'processing'] } })
+      .lean<PaymentLean>()
+      .exec();
+    return doc ? this.toDomain(doc) : null;
+  }
+
   /** Converte documento Mongoose para entidade de domínio */
   private toDomain(doc: PaymentLean): Payment {
     return new Payment({

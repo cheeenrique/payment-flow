@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppConfigModule } from './config/app-config.module';
 import { DatabaseModule } from './infra/database/database.module';
 import { RabbitModule } from './infra/messaging/rabbit.module';
@@ -24,6 +25,8 @@ import { SimulatorModule } from './modules/simulator/simulator.module';
     DatabaseModule,
     RabbitModule,
     SseModule,
+    // Registra o motor de agendamento cron (uma única vez para toda a aplicação)
+    ScheduleModule.forRoot(),
     // GraphQL code-first: schema gerado a partir dos @ObjectType/@Resolver.
     // context expõe `req` para os guards GQL extraírem o token do header.
     GraphQLModule.forRoot<ApolloDriverConfig>({

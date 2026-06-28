@@ -26,4 +26,9 @@ export interface IChargeRepository {
     limit: number,
   ): Promise<ListChargesResult>;
   update(charge: Charge): Promise<void>;
+  /**
+   * Retorna cobranças ainda abertas (pending/awaiting_payment) cujo prazo já venceu.
+   * Usado pelo scheduler de expiração — limite impede varredura total da collection.
+   */
+  findExpirable(now: Date, limit: number): Promise<Charge[]>;
 }

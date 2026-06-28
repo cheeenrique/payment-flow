@@ -5,6 +5,7 @@ import { PaymentModel, PaymentSchema } from './infrastructure/database/payment.s
 import { MongoPaymentRepository } from './infrastructure/repositories/mongo-payment.repository';
 import { PaymentEventsConsumer } from './infrastructure/messaging/payment-events.consumer';
 import { SimulatorVerdictConsumer } from './infrastructure/messaging/simulator-verdict.consumer';
+import { ChargeExpiredConsumer } from './infrastructure/messaging/charge-expired.consumer';
 
 import { CreatePaymentUseCase } from './application/use-cases/create-payment.use-case';
 import { ProcessPaymentUseCase } from './application/use-cases/process-payment.use-case';
@@ -38,6 +39,8 @@ import { PAYMENT_REPOSITORY } from './payments.tokens';
     PaymentEventsConsumer,
     // Microservice — consumer de vereditos do simulador (simulator.payment.approved/failed.v1)
     SimulatorVerdictConsumer,
+    // Microservice — expira pagamentos ativos quando a cobrança associada expira (charge.expired.v1)
+    ChargeExpiredConsumer,
   ],
   providers: [
     // Repositório: token DI → implementação concreta (DIP)
