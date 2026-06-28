@@ -27,6 +27,7 @@ function criarMocks(chargeFake: Charge | null = null) {
     findAll: jest.fn(),
     update: jest.fn().mockResolvedValue(undefined),
     findExpirable: jest.fn(),
+    countByStatus: jest.fn().mockResolvedValue({}),
   };
 
   const eventBus = {

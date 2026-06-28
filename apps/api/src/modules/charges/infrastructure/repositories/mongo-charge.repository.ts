@@ -84,6 +84,19 @@ export class MongoChargeRepository implements IChargeRepository {
     return docs.map((doc) => this.toDomain(doc));
   }
 
+  async countByStatus(): Promise<Record<string, number>> {
+    const results = await this.model
+      .aggregate<{ _id: string; count: number }>([
+        { $group: { _id: '$status', count: { $sum: 1 } } },
+      ])
+      .exec();
+
+    return results.reduce<Record<string, number>>((acc, { _id, count }) => {
+      acc[_id] = count;
+      return acc;
+    }, {});
+  }
+
   /** Constrói o objeto de filtro do Mongoose a partir dos critérios de listagem */
   private buildQuery(filter?: ListChargesFilter): Record<string, unknown> {
     const query: Record<string, unknown> = {};

@@ -30,6 +30,7 @@ function criarMocks(chargesFake: Charge[] = []) {
     findAll: jest.fn(),
     update: jest.fn(),
     findExpirable: jest.fn().mockResolvedValue(chargesFake),
+    countByStatus: jest.fn().mockResolvedValue({}),
   };
 
   const expireChargeUseCase = {

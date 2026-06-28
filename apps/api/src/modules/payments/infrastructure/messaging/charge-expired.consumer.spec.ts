@@ -50,6 +50,7 @@ function criarMocks(paymentFake: Payment | null = null) {
     findByChargeId: jest.fn(),
     findByIdempotencyKey: jest.fn(),
     findActiveByChargeId: jest.fn().mockResolvedValue(paymentFake),
+    countByStatus: jest.fn().mockResolvedValue({}),
   };
 
   const eventBus = {

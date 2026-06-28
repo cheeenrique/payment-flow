@@ -55,5 +55,9 @@ import { PAYMENT_REPOSITORY } from './payments.tokens';
     // GraphQL resolver — query-side
     PaymentsResolver,
   ],
+  exports: [
+    // Repositório exportado para leitura cross-module (ex: DashboardModule — CQRS read side)
+    PAYMENT_REPOSITORY,
+  ],
 })
 export class PaymentsModule {}

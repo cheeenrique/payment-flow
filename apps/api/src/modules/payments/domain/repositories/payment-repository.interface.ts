@@ -22,4 +22,9 @@ export interface IPaymentRepository {
    * Retorna null se não houver pagamento ativo para a cobrança.
    */
   findActiveByChargeId(chargeId: string): Promise<Payment | null>;
+  /**
+   * Retorna mapa de status → quantidade para uso no dashboard agregado.
+   * Somente statuses com documentos existentes aparecem no mapa retornado.
+   */
+  countByStatus(): Promise<Record<string, number>>;
 }

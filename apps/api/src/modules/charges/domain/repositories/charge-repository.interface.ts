@@ -31,4 +31,9 @@ export interface IChargeRepository {
    * Usado pelo scheduler de expiração — limite impede varredura total da collection.
    */
   findExpirable(now: Date, limit: number): Promise<Charge[]>;
+  /**
+   * Retorna mapa de status → quantidade para uso no dashboard agregado.
+   * Somente statuses com documentos existentes aparecem no mapa retornado.
+   */
+  countByStatus(): Promise<Record<string, number>>;
 }

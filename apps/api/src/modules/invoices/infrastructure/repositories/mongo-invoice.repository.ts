@@ -64,6 +64,19 @@ export class MongoInvoiceRepository implements IInvoiceRepository {
     return doc ? this.toDomain(doc) : null;
   }
 
+  async countByStatus(): Promise<Record<string, number>> {
+    const results = await this.model
+      .aggregate<{ _id: string; count: number }>([
+        { $group: { _id: '$status', count: { $sum: 1 } } },
+      ])
+      .exec();
+
+    return results.reduce<Record<string, number>>((acc, { _id, count }) => {
+      acc[_id] = count;
+      return acc;
+    }, {});
+  }
+
   /** Mapeia documento Mongoose → entidade de domínio (sem vazar infra para o domínio) */
   private toDomain(doc: InvoiceLean): Invoice {
     return new Invoice({

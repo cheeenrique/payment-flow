@@ -13,4 +13,9 @@ export interface IInvoiceRepository {
   findById(id: string): Promise<Invoice | null>;
   /** Busca invoice pelo ID do pagamento associado (relação 1-para-1) */
   findByPaymentId(paymentId: string): Promise<Invoice | null>;
+  /**
+   * Retorna mapa de status → quantidade para uso no dashboard agregado.
+   * Somente statuses com documentos existentes aparecem no mapa retornado.
+   */
+  countByStatus(): Promise<Record<string, number>>;
 }

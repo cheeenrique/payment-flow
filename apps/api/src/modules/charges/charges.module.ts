@@ -66,6 +66,8 @@ import { CHARGE_REPOSITORY } from './charges.tokens';
     ChargesResolver,
   ],
   exports: [
+    // Repositório exportado para leitura cross-module (ex: DashboardModule — CQRS read side)
+    CHARGE_REPOSITORY,
     // Casos de uso exportados para o Simulator e módulos de infraestrutura
     ExpireChargeUseCase,
     GetChargeUseCase,

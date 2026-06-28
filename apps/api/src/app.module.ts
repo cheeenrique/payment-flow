@@ -18,6 +18,7 @@ import { InvoicesModule } from './modules/invoices/invoices.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { TimelineModule } from './modules/timeline/timeline.module';
 import { SimulatorModule } from './modules/simulator/simulator.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { SimulatorModule } from './modules/simulator/simulator.module';
     NotificationsModule,
     TimelineModule,
     SimulatorModule,
+    DashboardModule,
   ],
   controllers: [HealthController],
   providers: [

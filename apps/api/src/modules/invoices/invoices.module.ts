@@ -59,5 +59,9 @@ import { INVOICE_REPOSITORY } from './invoices.tokens';
     // Presentation — resolver GraphQL
     InvoicesResolver,
   ],
+  exports: [
+    // Repositório exportado para leitura cross-module (ex: DashboardModule — CQRS read side)
+    INVOICE_REPOSITORY,
+  ],
 })
 export class InvoicesModule {}
