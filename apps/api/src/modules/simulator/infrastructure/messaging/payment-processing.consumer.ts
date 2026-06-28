@@ -18,7 +18,7 @@ import {
  * por timeline e eventualmente outros módulos. Por isso, este handler:
  *   - NÃO faz ACK/NACK manual (evita double-ack com handlers encadeados)
  *   - Captura erros internamente e retorna normalmente
- *   - Implementa idempotência via SimulatorConfig + setTimeout não-bloqueante
+ *   - Implementa idempotência via existsByPaymentId — reprocessamento não cria veredito duplicado
  */
 @Controller()
 export class PaymentProcessingConsumer {

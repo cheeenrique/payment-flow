@@ -4,9 +4,14 @@ import { MongooseModule } from '@nestjs/mongoose';
 // Infra — banco de dados
 import { SimulatorConfigModel, SimulatorConfigSchema } from './infrastructure/database/simulator-config.schema';
 import { MongoSimulatorConfigRepository } from './infrastructure/repositories/mongo-simulator-config.repository';
+import { ScheduledVerdictModel, ScheduledVerdictSchema } from './infrastructure/database/scheduled-verdict.schema';
+import { MongoScheduledVerdictRepository } from './infrastructure/repositories/mongo-scheduled-verdict.repository';
 
 // Infra — mensageria
 import { PaymentProcessingConsumer } from './infrastructure/messaging/payment-processing.consumer';
+
+// Infra — jobs
+import { SimulationVerdictScheduler } from './infrastructure/jobs/simulation-verdict.scheduler';
 
 // Application — casos de uso
 import { GetSimulatorConfigUseCase } from './application/use-cases/get-simulator-config.use-case';
@@ -23,8 +28,8 @@ import { RabbitModule } from '@/infra/messaging/rabbit.module';
 import { SseModule } from '@/infra/sse/sse.module';
 import { AuthModule } from '@/modules/auth/auth.module';
 
-// Token DI
-import { SIMULATOR_CONFIG_REPOSITORY } from './simulator.tokens';
+// Tokens DI
+import { SIMULATOR_CONFIG_REPOSITORY, SCHEDULED_VERDICT_REPOSITORY } from './simulator.tokens';
 
 /**
  * Módulo Simulator — motor de comportamento controlado do PSP artificial (MODELO A).
@@ -42,13 +47,19 @@ import { SIMULATOR_CONFIG_REPOSITORY } from './simulator.tokens';
  *   simulator.payment.failed
  *   simulator.payment.delay
  *
+ * Durabilidade (12-factor #9 — disposability):
+ *   Vereditos com delay > 0 são persistidos na collection simulator_scheduled_verdicts.
+ *   SimulationVerdictScheduler (@Cron a cada 10s) processa os vencidos e publica o evento.
+ *   Restarts/redeploys não perdem vereditos pendentes.
+ *
  * Para ativar: adicionar SimulatorModule ao AppModule.imports
  */
 @Module({
   imports: [
-    // Schema Mongoose para persistência da configuração global
+    // Schemas Mongoose para persistência
     MongooseModule.forFeature([
       { name: SimulatorConfigModel.name, schema: SimulatorConfigSchema },
+      { name: ScheduledVerdictModel.name, schema: ScheduledVerdictSchema },
     ]),
     // Reutiliza infra existente sem recriar providers
     RabbitModule,
@@ -61,14 +72,18 @@ import { SIMULATOR_CONFIG_REPOSITORY } from './simulator.tokens';
     PaymentProcessingConsumer,
   ],
   providers: [
-    // Repositório — DIP: token símbolo → implementação concreta Mongoose
+    // Repositórios — DIP: token símbolo → implementação concreta Mongoose
     { provide: SIMULATOR_CONFIG_REPOSITORY, useClass: MongoSimulatorConfigRepository },
+    { provide: SCHEDULED_VERDICT_REPOSITORY, useClass: MongoScheduledVerdictRepository },
 
     // Application — casos de uso
     GetSimulatorConfigUseCase,
     UpdateSimulatorConfigUseCase,
     ResetSimulatorConfigUseCase,
     ProcessPaymentSimulationUseCase,
+
+    // Jobs — scheduler durável de vereditos (requer ScheduleModule.forRoot() no AppModule)
+    SimulationVerdictScheduler,
 
     // Presentation — resolver GraphQL code-first
     SimulatorResolver,
