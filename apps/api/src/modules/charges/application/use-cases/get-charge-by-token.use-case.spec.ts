@@ -107,16 +107,6 @@ describe('GetChargeByTokenUseCase', () => {
       expect((view as unknown as Record<string, unknown>)['expiresAt']).toBeUndefined();
     });
 
-    it('customerName é undefined (módulo de clientes desacoplado)', async () => {
-      const charge = makeCharge();
-      const chargeRepo = makeChargeRepo(charge);
-      const useCase = new GetChargeByTokenUseCase(chargeRepo);
-
-      const view = await useCase.execute('aaaaaaaabbbbbbbbcccccccc00000001');
-
-      expect(view.customerName).toBeUndefined();
-    });
-
     it('busca pelo token informado', async () => {
       const charge = makeCharge();
       const chargeRepo = makeChargeRepo(charge);

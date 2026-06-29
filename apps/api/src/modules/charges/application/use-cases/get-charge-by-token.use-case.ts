@@ -11,7 +11,6 @@ export interface PublicChargeView {
   description?: string;
   status: string;
   availableMethods: PaymentMethod[];
-  customerName?: string;
 }
 
 /** Métodos de pagamento disponíveis para o checkout público */
