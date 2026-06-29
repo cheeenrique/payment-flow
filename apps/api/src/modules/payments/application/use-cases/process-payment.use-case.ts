@@ -63,7 +63,15 @@ export class ProcessPaymentUseCase {
 
     this.sseService.emit({
       type: 'payment.processing',
-      data: { paymentId: processing.id, chargeId: processing.chargeId, status: 'processing' },
+      data: {
+        id: processing.id,
+        paymentId: processing.id,
+        chargeId: processing.chargeId,
+        customerId: processing.customerId,
+        amount: processing.amount,
+        method: processing.method,
+        status: 'processing',
+      },
     });
 
     this.logger.log(

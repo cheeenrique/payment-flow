@@ -48,7 +48,17 @@ export class CancelChargeUseCase {
 
     this.sseService.emit({
       type: 'charge.canceled',
-      data: { chargeId: charge.id, status: charge.status },
+      data: {
+        id: charge.id,
+        chargeId: charge.id,
+        customerId: charge.customerId,
+        amount: charge.amount,
+        currency: charge.currency,
+        status: charge.status,
+        paymentMethod: charge.paymentMethod,
+        createdAt: charge.createdAt,
+        updatedAt: charge.updatedAt,
+      },
     });
   }
 }

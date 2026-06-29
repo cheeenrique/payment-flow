@@ -79,10 +79,15 @@ export class CreateChargeUseCase {
     this.sseService.emit({
       type: 'charge.created',
       data: {
+        id: charge.id,
         chargeId: charge.id,
         customerId: charge.customerId,
-        status: charge.status,
         amount: charge.amount,
+        currency: charge.currency,
+        status: charge.status,
+        paymentMethod: charge.paymentMethod,
+        createdAt: charge.createdAt,
+        updatedAt: charge.updatedAt,
       },
     });
   }

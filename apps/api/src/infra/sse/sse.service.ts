@@ -23,6 +23,7 @@ export class SseService {
     this.events$.next(payload);
   }
 
+  // TODO: filtrar por usuário/tenant (follow-up)
   stream(): Observable<MessageEvent> {
     return this.events$.asObservable().pipe(
       map(
