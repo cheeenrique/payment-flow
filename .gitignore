@@ -25,3 +25,10 @@ coverage/
 .DS_Store
 .idea/
 *.swp
+
+# sdd scratch
+.superpowers/
+
+# build artifacts
+*.tsbuildinfo
+.playwright-mcp/
