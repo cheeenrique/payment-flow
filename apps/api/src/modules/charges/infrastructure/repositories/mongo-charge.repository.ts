@@ -128,7 +128,7 @@ export class MongoChargeRepository implements IChargeRepository {
       description: doc.description,
       status: doc.status as ChargeStatus,
       paymentLinkToken: doc.paymentLinkToken,
-      paymentMethod: doc.paymentMethod ? (doc.paymentMethod as PaymentMethod) : null,
+      paymentMethod: (doc.paymentMethod ?? null) as PaymentMethod | null,
       expiresAt: doc.expiresAt,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,

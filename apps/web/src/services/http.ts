@@ -36,27 +36,98 @@ const http = axios.create({
 // Interceptor de request: adiciona JWT em todas as requisições autenticadas
 http.interceptors.request.use(applyJwtHeader)
 
+// Controla se já há um refresh em andamento (evita chamadas paralelas duplicadas)
+let isRefreshing = false
+
+/** Cada entrada guarda tanto o callback de retry quanto o reject da promise pendente */
+interface PendingEntry {
+  retry: (token: string) => void
+  fail: (err: unknown) => void
+}
+
+let pendingRetry: Array<PendingEntry> = []
+
+/** Retenta todas as requisições enfileiradas com o novo token e esvazia a fila */
+function drainPending(token: string): void {
+  pendingRetry.forEach((entry) => entry.retry(token))
+  pendingRetry = []
+}
+
+/** Rejeita todas as requisições enfileiradas com o erro recebido e esvazia a fila */
+function rejectPending(err: unknown): void {
+  pendingRetry.forEach((entry) => entry.fail(err))
+  pendingRetry = []
+}
+
+const AUTH_SKIP_URLS = ['/auth/login', '/auth/refresh']
+
 /**
- * Interceptor de response: em 401, faz logout e redireciona para /login.
- * Usa importação dinâmica para evitar dependência circular (http → auth.store → auth.service → http).
- * Chamadas de login são ignoradas para evitar loop de redirecionamento.
+ * Interceptor de response:
+ * - Em 401 em rotas autenticadas: tenta refresh do token uma vez.
+ * - Se refresh bem-sucedido: atualiza token e retenta request original.
+ * - Se refresh falhar: faz logout e redireciona para /login.
+ * - Chamadas para /auth/login e /auth/refresh são ignoradas (evita loop).
  */
 http.interceptors.response.use(
   (response) => response,
-  (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      const url = error.config?.url ?? ''
-      const isLoginRequest = url.includes('/auth/login')
-      if (!isLoginRequest) {
-        void import('@/stores/auth.store').then(({ useAuthStore }) => {
-          useAuthStore().logout()
-        })
-        void import('@/router').then(({ default: router }) => {
-          void router.push('/login')
-        })
-      }
+  async (error: AxiosError) => {
+    const originalConfig = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
+
+    if (error.response?.status !== 401) {
+      return Promise.reject(error)
     }
-    return Promise.reject(error)
+
+    const url = originalConfig?.url ?? ''
+    const isSkipped = AUTH_SKIP_URLS.some((skip) => url.includes(skip))
+
+    if (isSkipped || originalConfig._retry) {
+      return Promise.reject(error)
+    }
+
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        pendingRetry.push({
+          retry: (token) => {
+            originalConfig._retry = true
+            originalConfig.headers['Authorization'] = `Bearer ${token}`
+            http.request(originalConfig).then(resolve).catch(reject)
+          },
+          fail: reject,
+        })
+      })
+    }
+
+    originalConfig._retry = true
+    isRefreshing = true
+
+    try {
+      const { useAuthStore } = await import('@/stores/auth.store')
+      const store = useAuthStore()
+      const refreshToken = store.refreshToken
+
+      if (!refreshToken) {
+        throw new Error('no refresh token')
+      }
+
+      const { postRefresh } = await import('@/services/auth.service')
+      const { accessToken } = await postRefresh(refreshToken)
+
+      store.setAccessToken(accessToken)
+      drainPending(accessToken)
+
+      originalConfig.headers['Authorization'] = `Bearer ${accessToken}`
+      return http.request(originalConfig)
+    } catch {
+      // Rejeita todas as requisições enfileiradas antes de fazer logout
+      rejectPending(error)
+      const { useAuthStore } = await import('@/stores/auth.store')
+      useAuthStore().logout()
+      const { default: router } = await import('@/router')
+      void router.push('/login')
+      return Promise.reject(error)
+    } finally {
+      isRefreshing = false
+    }
   },
 )
 

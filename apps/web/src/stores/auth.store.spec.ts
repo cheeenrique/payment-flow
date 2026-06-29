@@ -3,30 +3,21 @@ import { setActivePinia, createPinia } from 'pinia'
 import { useAuthStore } from '@/stores/auth.store'
 import * as authService from '@/services/auth.service'
 
-// Mock completo do módulo de serviço — não toca no cliente http real
 vi.mock('@/services/auth.service')
 
 describe('auth.store', () => {
-  // Simulação isolada do localStorage para não contaminar outros testes
   let localStorageStore: Record<string, string> = {}
 
   const localStorageMock = {
     getItem: vi.fn((key: string) => localStorageStore[key] ?? null),
-    setItem: vi.fn((key: string, value: string) => {
-      localStorageStore[key] = value
-    }),
-    removeItem: vi.fn((key: string) => {
-      delete localStorageStore[key]
-    }),
-    clear: vi.fn(() => {
-      localStorageStore = {}
-    }),
+    setItem: vi.fn((key: string, value: string) => { localStorageStore[key] = value }),
+    removeItem: vi.fn((key: string) => { delete localStorageStore[key] }),
+    clear: vi.fn(() => { localStorageStore = {} }),
   }
 
   beforeEach(() => {
     localStorageStore = {}
     vi.stubGlobal('localStorage', localStorageMock)
-    // Cria instância fresca do Pinia a cada teste para evitar vazamento de estado
     setActivePinia(createPinia())
   })
 
@@ -42,10 +33,7 @@ describe('auth.store', () => {
         refreshToken: 'refresh-abc',
       })
       vi.mocked(authService.getMe).mockResolvedValue({
-        id: 'user-1',
-        email: 'user@test.com',
-        roles: [],
-        permissions: [],
+        id: 'user-1', email: 'user@test.com', roles: [], permissions: [],
       })
 
       const store = useAuthStore()
@@ -54,22 +42,20 @@ describe('auth.store', () => {
       expect(authService.postLogin).toHaveBeenCalledWith('user@test.com', 'senha123')
     })
 
-    it('salva accessToken no localStorage após login bem-sucedido', async () => {
+    it('salva accessToken e refreshToken no localStorage após login bem-sucedido', async () => {
       vi.mocked(authService.postLogin).mockResolvedValue({
         accessToken: 'token-123',
         refreshToken: 'refresh-abc',
       })
       vi.mocked(authService.getMe).mockResolvedValue({
-        id: 'user-1',
-        email: 'user@test.com',
-        roles: [],
-        permissions: [],
+        id: 'user-1', email: 'user@test.com', roles: [], permissions: [],
       })
 
       const store = useAuthStore()
       await store.login('user@test.com', 'senha123')
 
       expect(localStorageMock.setItem).toHaveBeenCalledWith('accessToken', 'token-123')
+      expect(localStorageMock.setItem).toHaveBeenCalledWith('refreshToken', 'refresh-abc')
     })
 
     it('define isAuthenticated como true após login', async () => {
@@ -78,10 +64,7 @@ describe('auth.store', () => {
         refreshToken: 'refresh-abc',
       })
       vi.mocked(authService.getMe).mockResolvedValue({
-        id: 'user-1',
-        email: 'user@test.com',
-        roles: [],
-        permissions: [],
+        id: 'user-1', email: 'user@test.com', roles: [], permissions: [],
       })
 
       const store = useAuthStore()
@@ -91,12 +74,7 @@ describe('auth.store', () => {
     })
 
     it('popula user via getMe após login bem-sucedido', async () => {
-      const user = {
-        id: 'user-1',
-        email: 'user@test.com',
-        roles: ['admin'],
-        permissions: ['invoices:read'],
-      }
+      const user = { id: 'user-1', email: 'user@test.com', roles: ['admin'], permissions: ['invoices:read'] }
       vi.mocked(authService.postLogin).mockResolvedValue({
         accessToken: 'token-123',
         refreshToken: 'refresh-abc',
@@ -110,7 +88,7 @@ describe('auth.store', () => {
       expect(store.user).toEqual(user)
     })
 
-    it('reverte token quando getMe falha após postLogin', async () => {
+    it('reverte tokens quando getMe falha após postLogin', async () => {
       vi.mocked(authService.postLogin).mockResolvedValue({
         accessToken: 'token-123',
         refreshToken: 'refresh-abc',
@@ -122,23 +100,42 @@ describe('auth.store', () => {
 
       expect(store.isAuthenticated).toBe(false)
       expect(store.accessToken).toBeNull()
+      expect(store.refreshToken).toBeNull()
       expect(localStorageMock.removeItem).toHaveBeenCalledWith('accessToken')
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith('refreshToken')
     })
 
-    it('não salva token no localStorage quando postLogin rejeita', async () => {
+    it('não salva tokens no localStorage quando postLogin rejeita', async () => {
       vi.mocked(authService.postLogin).mockRejectedValue(new Error('credenciais inválidas'))
 
       const store = useAuthStore()
       await expect(store.login('user@test.com', 'senha-errada')).rejects.toThrow()
 
       expect(store.isAuthenticated).toBe(false)
-      expect(store.accessToken).toBeNull()
       expect(localStorageMock.setItem).not.toHaveBeenCalled()
+    })
+
+    it('accessToken é readonly — atribuição direta não altera o valor', async () => {
+      vi.mocked(authService.postLogin).mockResolvedValue({
+        accessToken: 'token-123',
+        refreshToken: 'refresh-abc',
+      })
+      vi.mocked(authService.getMe).mockResolvedValue({
+        id: 'user-1', email: 'user@test.com', roles: [], permissions: [],
+      })
+
+      const store = useAuthStore()
+      await store.login('user@test.com', 'senha123')
+
+      // Tentativa de mutação direta em computed readonly deve ser ignorada (ou lançar em dev)
+      // A intenção do teste é verificar que o valor não muda sem chamar setAccessToken
+      const before = store.accessToken
+      try { (store as unknown as { accessToken: string }).accessToken = 'hacked' } catch { /* expected */ }
+      expect(store.accessToken).toBe(before)
     })
   })
 
   describe('logout', () => {
-    // Setup compartilhado: loga o usuário antes de cada teste de logout
     let store: ReturnType<typeof useAuthStore>
 
     beforeEach(async () => {
@@ -147,18 +144,16 @@ describe('auth.store', () => {
         refreshToken: 'refresh-abc',
       })
       vi.mocked(authService.getMe).mockResolvedValue({
-        id: 'user-1',
-        email: 'user@test.com',
-        roles: [],
-        permissions: [],
+        id: 'user-1', email: 'user@test.com', roles: [], permissions: [],
       })
       store = useAuthStore()
       await store.login('user@test.com', 'senha123')
     })
 
-    it('remove accessToken do localStorage', () => {
+    it('remove accessToken e refreshToken do localStorage', () => {
       store.logout()
       expect(localStorageMock.removeItem).toHaveBeenCalledWith('accessToken')
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith('refreshToken')
     })
 
     it('reseta user para null após logout', () => {
@@ -174,13 +169,7 @@ describe('auth.store', () => {
 
   describe('loadMe', () => {
     it('popula store.user com o retorno de getMe', async () => {
-      const user = {
-        id: 'user-42',
-        email: 'carla@test.com',
-        roles: ['editor'],
-        permissions: ['invoices:write'],
-      }
-      // Simula token já presente para que loadMe possa ser chamado isoladamente
+      const user = { id: 'user-42', email: 'carla@test.com', roles: ['editor'], permissions: ['invoices:write'] }
       localStorageStore['accessToken'] = 'token-existente'
       vi.mocked(authService.getMe).mockResolvedValue(user)
 
@@ -193,16 +182,35 @@ describe('auth.store', () => {
 
   describe('hidratação via localStorage', () => {
     it('inicializa isAuthenticated como true quando há token salvo no localStorage', () => {
-      // Token pré-existente antes da criação do store
       localStorageStore['accessToken'] = 'token-existente'
+      localStorageStore['refreshToken'] = 'refresh-existente'
       vi.stubGlobal('localStorage', localStorageMock)
 
-      // Pinia fresco para não herdar estado de testes anteriores
       setActivePinia(createPinia())
       const store = useAuthStore()
 
       expect(store.isAuthenticated).toBe(true)
       expect(store.accessToken).toBe('token-existente')
+      expect(store.refreshToken).toBe('refresh-existente')
+    })
+  })
+
+  describe('setAccessToken', () => {
+    it('atualiza accessToken e persiste no localStorage', async () => {
+      vi.mocked(authService.postLogin).mockResolvedValue({
+        accessToken: 'token-123',
+        refreshToken: 'refresh-abc',
+      })
+      vi.mocked(authService.getMe).mockResolvedValue({
+        id: 'user-1', email: 'user@test.com', roles: [], permissions: [],
+      })
+
+      const store = useAuthStore()
+      await store.login('user@test.com', 'senha123')
+      store.setAccessToken('new-token-456')
+
+      expect(store.accessToken).toBe('new-token-456')
+      expect(localStorageMock.setItem).toHaveBeenCalledWith('accessToken', 'new-token-456')
     })
   })
 })

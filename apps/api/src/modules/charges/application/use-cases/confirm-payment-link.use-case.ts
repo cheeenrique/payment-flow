@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { Charge, PaymentMethod } from '@/modules/charges/domain/entities/charge.entity';
+import { Charge, ChargeStatus, PaymentMethod } from '@/modules/charges/domain/entities/charge.entity';
 import type { IChargeRepository } from '@/modules/charges/domain/repositories/charge-repository.interface';
 import { ChargeNotFoundError } from '@/modules/charges/domain/errors/charge-not-found.error';
 import { ChargePaymentRequestedEvent } from '@/modules/charges/domain/events/charge-payment-requested.event';
@@ -13,7 +13,7 @@ export interface ConfirmPaymentLinkInput {
 }
 
 export interface ConfirmPaymentLinkOutput {
-  status: string;
+  status: ChargeStatus;
 }
 
 /**

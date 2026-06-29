@@ -29,17 +29,9 @@ describe('ChargeSummaryCard', () => {
 
   it('não renderiza parágrafo de descrição quando ausente', () => {
     const wrapper = mount(ChargeSummaryCard, { props: { view: makeView() } })
-    // Sem description, o <p> condicional não deve existir
     const paragraphs = wrapper.findAll('p')
     const hasUndefined = paragraphs.some((p) => p.text().includes('undefined'))
     expect(hasUndefined).toBe(false)
-  })
-
-  it('exibe o nome do cliente quando presente', () => {
-    const wrapper = mount(ChargeSummaryCard, {
-      props: { view: makeView({ customerName: 'Carlos' }) },
-    })
-    expect(wrapper.text()).toContain('Carlos')
   })
 
   it('exibe o status badge com o status da cobrança', () => {

@@ -26,12 +26,18 @@ vi.mock('@/services/charges.service', () => ({
   list: vi.fn(),
 }))
 
+vi.mock('@/services/payments.service', () => ({
+  list: vi.fn(),
+}))
+
 import { apolloClient } from '@/services/apollo'
 import { fetchTimelinePage } from '@/services/timeline.service'
 import { createEventStream } from '@/streams/sse'
 import { registerSseHandlers } from '@/stores/sse-handlers'
 import { list as listCharges } from '@/services/charges.service'
+import { list as listPayments } from '@/services/payments.service'
 import { useTimelineStore } from '@/stores/timeline.store'
+import { usePaymentsStore } from '@/stores/payments.store'
 import { useRealtime } from '@/composables/useRealtime'
 import { DASHBOARD_SUMMARY } from '@/graphql/dashboard.query'
 import type { DashboardSummary } from '@/composables/useRealtime'
@@ -96,6 +102,7 @@ describe('useRealtime', () => {
     vi.mocked(apolloClient.query).mockResolvedValue({ data: { dashboard: mockSummary } })
     vi.mocked(fetchTimelinePage).mockResolvedValue({ total: 0, items: [] })
     vi.mocked(listCharges).mockResolvedValue({ items: [], total: 0 })
+    vi.mocked(listPayments).mockResolvedValue({ items: [], total: 0 })
   })
 
   afterEach(() => {
@@ -141,6 +148,30 @@ describe('useRealtime', () => {
 
     const timelineStore = useTimelineStore()
     expect(timelineStore.list).toEqual(mockItems)
+
+    wrapper.unmount()
+  })
+
+  it('carrega payments iniciais e popula o payments store', async () => {
+    const mockPayments = [
+      {
+        id: 'pay-1',
+        chargeId: 'charge-1',
+        status: 'approved' as const,
+        amount: 10000,
+        currency: 'BRL',
+        method: 'pix' as const,
+        createdAt: '2026-06-28T00:00:00Z',
+        updatedAt: '2026-06-28T00:00:00Z',
+      },
+    ]
+    vi.mocked(listPayments).mockResolvedValue({ items: mockPayments, total: 1 })
+
+    const { wrapper } = withSetup(() => useRealtime())
+    await flushPromises()
+
+    const paymentsStore = usePaymentsStore()
+    expect(paymentsStore.list).toEqual(mockPayments)
 
     wrapper.unmount()
   })

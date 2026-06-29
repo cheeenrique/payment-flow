@@ -6,6 +6,11 @@ export interface LoginResponse {
   refreshToken: string
 }
 
+// Resposta do endpoint de refresh
+export interface RefreshResponse {
+  accessToken: string
+}
+
 // Perfil do usuário autenticado
 export interface User {
   id: string
@@ -21,6 +26,16 @@ export async function postLogin(email: string, password: string): Promise<LoginR
   const res = await http.post<{ data: LoginResponse; meta: unknown }>('/auth/login', {
     email,
     password,
+  })
+  return unwrap(res)
+}
+
+/**
+ * Troca o refreshToken por um novo accessToken — POST /auth/refresh
+ */
+export async function postRefresh(refreshToken: string): Promise<RefreshResponse> {
+  const res = await http.post<{ data: RefreshResponse; meta: unknown }>('/auth/refresh', {
+    refreshToken,
   })
   return unwrap(res)
 }

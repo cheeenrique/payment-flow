@@ -95,6 +95,24 @@ export class MongoPaymentRepository implements IPaymentRepository {
     }, {});
   }
 
+  async findMany(
+    page: number,
+    limit: number,
+  ): Promise<{ items: Payment[]; total: number }> {
+    const skip = (page - 1) * limit;
+    const [docs, total] = await Promise.all([
+      this.model
+        .find()
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean<PaymentLean[]>()
+        .exec(),
+      this.model.countDocuments().exec(),
+    ]);
+    return { items: docs.map((doc) => this.toDomain(doc)), total };
+  }
+
   /** Converte documento Mongoose para entidade de domínio */
   private toDomain(doc: PaymentLean): Payment {
     return new Payment({

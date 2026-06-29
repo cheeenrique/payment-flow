@@ -42,7 +42,6 @@ describe('getByToken', () => {
   it('desempacota e retorna o CheckoutView do envelope', async () => {
     const view = makeCheckoutView({
       description: 'Cobrança de teste',
-      customerName: 'Carlos',
     })
 
     mockGet.mockResolvedValueOnce({
@@ -52,6 +51,13 @@ describe('getByToken', () => {
     const result = await getByToken('tok_abc123')
 
     expect(result).toEqual(view)
+  })
+
+  it('propaga erro quando GET falha', async () => {
+    const networkError = new Error('Network Error')
+    mockGet.mockRejectedValueOnce(networkError)
+
+    await expect(getByToken('tok_abc123')).rejects.toThrow('Network Error')
   })
 })
 
@@ -65,12 +71,33 @@ describe('confirm', () => {
 
     expect(mockPost).toHaveBeenCalledWith('/pay/tok_abc123/confirm', { method: 'pix' })
   })
+
+  it('resolve como void quando o POST bem-sucedido', async () => {
+    mockPost.mockResolvedValueOnce({
+      data: { data: null, meta: {} },
+    })
+
+    const result = await confirm('tok_abc123', 'pix')
+
+    expect(result).toBeUndefined()
+  })
+
+  it('propaga erro quando POST falha', async () => {
+    const serverError = new Error('Internal Server Error')
+    mockPost.mockRejectedValueOnce(serverError)
+
+    await expect(confirm('tok_abc123', 'pix')).rejects.toThrow('Internal Server Error')
+  })
 })
 
 describe('streamUrl', () => {
-  it('retorna a URL correta de forma síncrona', () => {
+  it('retorna URL concreta com o token informado', () => {
+    vi.stubEnv('VITE_API_URL', 'http://api.example.com')
+
     const url = streamUrl('tok_abc123')
 
-    expect(url).toBe(`${import.meta.env.VITE_API_URL}/pay/tok_abc123/stream`)
+    expect(url).toBe('http://api.example.com/pay/tok_abc123/stream')
+
+    vi.unstubAllEnvs()
   })
 })

@@ -2,7 +2,9 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getByToken, confirm, streamUrl } from '@/services/checkout.service'
-import type { CheckoutView } from '@/types'
+import type { CheckoutView, PaymentMethod } from '@/types'
+import { createReconnect } from '@/streams/reconnect'
+import type { ReconnectHandle } from '@/streams/reconnect'
 import { Button } from '@/components/ui/button'
 import ChargeSummaryCard from '@/components/checkout/ChargeSummaryCard.vue'
 import MethodSelector from '@/components/checkout/MethodSelector.vue'
@@ -22,7 +24,6 @@ type CheckoutPageState =
   | 'unavailable'
 
 const TERMINAL_STATES = new Set<CheckoutPageState>(['approved', 'failed', 'expired'])
-const RECONNECT_DELAY_MS = 2_000
 
 const route = useRoute()
 const token = route.params['token'] as string
@@ -34,7 +35,7 @@ const errorMessage = ref<string | null>(null)
 const submitting = ref(false)
 
 let eventSource: EventSource | null = null
-let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+const reconnect: ReconnectHandle = createReconnect({ baseMs: 1_000, maxMs: 10_000 })
 
 const isTerminal = computed(() => TERMINAL_STATES.has(pageState.value))
 const terminalState = computed(() => pageState.value as StatusState)
@@ -44,29 +45,38 @@ function handleSseEvent(eventType: string): void {
   switch (eventType) {
     case 'payment.processing':
       pageState.value = 'processing'
+      if (checkoutView.value) {
+        checkoutView.value = { ...checkoutView.value, status: 'awaiting_payment' }
+      }
       break
     case 'payment.approved':
     case 'charge.paid':
       pageState.value = 'approved'
+      if (checkoutView.value) {
+        checkoutView.value = { ...checkoutView.value, status: 'paid' }
+      }
       closeStream()
       break
     case 'payment.failed':
     case 'charge.failed':
       pageState.value = 'failed'
+      if (checkoutView.value) {
+        checkoutView.value = { ...checkoutView.value, status: 'failed' }
+      }
       closeStream()
       break
     case 'charge.expired':
       pageState.value = 'expired'
+      if (checkoutView.value) {
+        checkoutView.value = { ...checkoutView.value, status: 'expired' }
+      }
       closeStream()
       break
   }
 }
 
 function closeStream(): void {
-  if (reconnectTimer !== null) {
-    clearTimeout(reconnectTimer)
-    reconnectTimer = null
-  }
+  reconnect.cancel()
   eventSource?.close()
   eventSource = null
 }
@@ -76,6 +86,11 @@ function openStream(): void {
 
   const url = streamUrl(token)
   eventSource = new EventSource(url)
+
+  // Reseta o contador de tentativas ao reconectar com sucesso
+  eventSource.onopen = (): void => {
+    reconnect.reset()
+  }
 
   eventSource.onmessage = (event: MessageEvent): void => {
     try {
@@ -92,9 +107,9 @@ function openStream(): void {
 
     if (isTerminal.value) return
 
-    reconnectTimer = setTimeout(() => {
+    reconnect.schedule(() => {
       openStream()
-    }, RECONNECT_DELAY_MS)
+    })
   }
 }
 
@@ -108,7 +123,7 @@ async function handleConfirm(): Promise<void> {
   openStream()
 
   try {
-    await confirm(token, selectedMethod.value)
+    await confirm(token, selectedMethod.value as PaymentMethod)
     pageState.value = 'processing'
   } catch (err) {
     // confirm falhou — fecha stream e mantém estado awaiting com mensagem

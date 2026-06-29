@@ -19,6 +19,7 @@ import { CreatePaymentUseCase } from '@/modules/payments/application/use-cases/c
 import { ProcessPaymentUseCase } from '@/modules/payments/application/use-cases/process-payment.use-case';
 import { FindPaymentUseCase } from '@/modules/payments/application/use-cases/find-payment.use-case';
 import { FindPaymentsByChargeUseCase } from '@/modules/payments/application/use-cases/find-payments-by-charge.use-case';
+import { ListPaymentsUseCase } from '@/modules/payments/application/use-cases/list-payments.use-case';
 import { CreatePaymentDto } from './dtos/create-payment.dto';
 import { PaginationQueryDto } from '@/shared/pagination/pagination-query.dto';
 
@@ -35,6 +36,7 @@ export class PaymentsController {
     private readonly processPayment: ProcessPaymentUseCase,
     private readonly findPayment: FindPaymentUseCase,
     private readonly findByCharge: FindPaymentsByChargeUseCase,
+    private readonly listPayments: ListPaymentsUseCase,
   ) {}
 
   /**
@@ -65,6 +67,13 @@ export class PaymentsController {
     }
 
     return { paymentId: result.paymentId, status: result.status, deduplicated: result.deduplicated };
+  }
+
+  /** GET /payments — Lista todos os pagamentos, paginados por mais recentes */
+  @Get('payments')
+  @RequirePermissions(Permissions.PaymentsRead)
+  async handleList(@Query() query: PaginationQueryDto) {
+    return this.listPayments.execute({ page: query.page, limit: query.limit });
   }
 
   /** GET /payments/:id — Consulta um pagamento pelo ID */
