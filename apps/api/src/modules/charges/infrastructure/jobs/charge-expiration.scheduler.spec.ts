@@ -12,18 +12,19 @@ const baseChargeProps = {
   customerId: 'customer-uuid',
   amount: 10000,
   currency: 'BRL',
-  paymentMethod: PaymentMethod.PIX,
+  paymentMethod: PaymentMethod.PIX as PaymentMethod | null,
+  paymentLinkToken: 'aaaaaaaabbbbbbbbcccccccc00000001',
   expiresAt: new Date(Date.now() - 3600_000),
   status: ChargeStatus.PENDING,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
 
-function criarCobranca(id = 'charge-uuid'): Charge {
+function makeCharge(id = 'charge-uuid'): Charge {
   return new Charge({ id, ...baseChargeProps });
 }
 
-function criarMocks(chargesFake: Charge[] = []) {
+function makeMocks(chargesFake: Charge[] = []) {
   const chargeRepo: jest.Mocked<IChargeRepository> = {
     create: jest.fn(),
     findById: jest.fn(),
@@ -31,6 +32,7 @@ function criarMocks(chargesFake: Charge[] = []) {
     update: jest.fn(),
     findExpirable: jest.fn().mockResolvedValue(chargesFake),
     countByStatus: jest.fn().mockResolvedValue({}),
+    findByPaymentLinkToken: jest.fn(),
   };
 
   const expireChargeUseCase = {
@@ -43,39 +45,39 @@ function criarMocks(chargesFake: Charge[] = []) {
 describe('ChargeExpirationScheduler', () => {
   describe('lote vazio', () => {
     it('não chama expireChargeUseCase quando não há cobranças vencidas', async () => {
-      const { chargeRepo, expireChargeUseCase } = criarMocks([]);
+      const { chargeRepo, expireChargeUseCase } = makeMocks([]);
       const scheduler = new ChargeExpirationScheduler(chargeRepo, expireChargeUseCase);
 
-      await scheduler.expirarCobrancastVencidas();
+      await scheduler.expireOverdueCharges();
 
       expect(expireChargeUseCase.execute).not.toHaveBeenCalled();
     });
 
     it('consulta o repositório com data atual e o limite de lote', async () => {
-      const { chargeRepo, expireChargeUseCase } = criarMocks([]);
+      const { chargeRepo, expireChargeUseCase } = makeMocks([]);
       const scheduler = new ChargeExpirationScheduler(chargeRepo, expireChargeUseCase);
 
-      await scheduler.expirarCobrancastVencidas();
+      await scheduler.expireOverdueCharges();
 
       expect(chargeRepo.findExpirable).toHaveBeenCalledTimes(1);
       expect(chargeRepo.findExpirable).toHaveBeenCalledWith(expect.any(Date), BATCH_LIMIT);
     });
 
     it('resolve sem erro quando o repositório retorna lista vazia', async () => {
-      const { chargeRepo, expireChargeUseCase } = criarMocks([]);
+      const { chargeRepo, expireChargeUseCase } = makeMocks([]);
       const scheduler = new ChargeExpirationScheduler(chargeRepo, expireChargeUseCase);
 
-      await expect(scheduler.expirarCobrancastVencidas()).resolves.toBeUndefined();
+      await expect(scheduler.expireOverdueCharges()).resolves.toBeUndefined();
     });
   });
 
   describe('processamento do lote', () => {
     it('chama expireChargeUseCase.execute para cada cobrança do lote', async () => {
-      const charges = [criarCobranca('id-1'), criarCobranca('id-2'), criarCobranca('id-3')];
-      const { chargeRepo, expireChargeUseCase } = criarMocks(charges);
+      const charges = [makeCharge('id-1'), makeCharge('id-2'), makeCharge('id-3')];
+      const { chargeRepo, expireChargeUseCase } = makeMocks(charges);
       const scheduler = new ChargeExpirationScheduler(chargeRepo, expireChargeUseCase);
 
-      await scheduler.expirarCobrancastVencidas();
+      await scheduler.expireOverdueCharges();
 
       expect(expireChargeUseCase.execute).toHaveBeenCalledTimes(3);
       expect(expireChargeUseCase.execute).toHaveBeenCalledWith('id-1');
@@ -84,8 +86,8 @@ describe('ChargeExpirationScheduler', () => {
     });
 
     it('falha com ChargeCannotExpireError num item não bloqueia os demais (Promise.allSettled)', async () => {
-      const charges = [criarCobranca('id-ok'), criarCobranca('id-race'), criarCobranca('id-outro-ok')];
-      const { chargeRepo, expireChargeUseCase } = criarMocks(charges);
+      const charges = [makeCharge('id-ok'), makeCharge('id-race'), makeCharge('id-outro-ok')];
+      const { chargeRepo, expireChargeUseCase } = makeMocks(charges);
 
       // Simula race condition: cobrança já transitada entre consulta e expiração
       expireChargeUseCase.execute
@@ -95,13 +97,13 @@ describe('ChargeExpirationScheduler', () => {
 
       const scheduler = new ChargeExpirationScheduler(chargeRepo, expireChargeUseCase);
 
-      await expect(scheduler.expirarCobrancastVencidas()).resolves.toBeUndefined();
+      await expect(scheduler.expireOverdueCharges()).resolves.toBeUndefined();
       expect(expireChargeUseCase.execute).toHaveBeenCalledTimes(3);
     });
 
     it('falha com ChargeNotFoundError num item não bloqueia os demais', async () => {
-      const charges = [criarCobranca('id-ok'), criarCobranca('id-sumiu')];
-      const { chargeRepo, expireChargeUseCase } = criarMocks(charges);
+      const charges = [makeCharge('id-ok'), makeCharge('id-sumiu')];
+      const { chargeRepo, expireChargeUseCase } = makeMocks(charges);
 
       expireChargeUseCase.execute
         .mockResolvedValueOnce(undefined)
@@ -109,13 +111,13 @@ describe('ChargeExpirationScheduler', () => {
 
       const scheduler = new ChargeExpirationScheduler(chargeRepo, expireChargeUseCase);
 
-      await expect(scheduler.expirarCobrancastVencidas()).resolves.toBeUndefined();
+      await expect(scheduler.expireOverdueCharges()).resolves.toBeUndefined();
       expect(expireChargeUseCase.execute).toHaveBeenCalledTimes(2);
     });
 
     it('erro inesperado num item não impede processamento dos demais (Promise.allSettled)', async () => {
-      const charges = [criarCobranca('id-a'), criarCobranca('id-b'), criarCobranca('id-c')];
-      const { chargeRepo, expireChargeUseCase } = criarMocks(charges);
+      const charges = [makeCharge('id-a'), makeCharge('id-b'), makeCharge('id-c')];
+      const { chargeRepo, expireChargeUseCase } = makeMocks(charges);
 
       expireChargeUseCase.execute
         .mockResolvedValueOnce(undefined)
@@ -125,7 +127,7 @@ describe('ChargeExpirationScheduler', () => {
       const scheduler = new ChargeExpirationScheduler(chargeRepo, expireChargeUseCase);
 
       // Promise.allSettled garante que o método resolve mesmo com falha parcial
-      await expect(scheduler.expirarCobrancastVencidas()).resolves.toBeUndefined();
+      await expect(scheduler.expireOverdueCharges()).resolves.toBeUndefined();
       expect(expireChargeUseCase.execute).toHaveBeenCalledTimes(3);
     });
   });
@@ -133,12 +135,12 @@ describe('ChargeExpirationScheduler', () => {
   describe('lote no limite (BATCH_LIMIT)', () => {
     it('processa sem erro quando o lote atinge exatamente 100 cobranças', async () => {
       const charges = Array.from({ length: BATCH_LIMIT }, (_, i) =>
-        criarCobranca(`charge-${i}`),
+        makeCharge(`charge-${i}`),
       );
-      const { chargeRepo, expireChargeUseCase } = criarMocks(charges);
+      const { chargeRepo, expireChargeUseCase } = makeMocks(charges);
       const scheduler = new ChargeExpirationScheduler(chargeRepo, expireChargeUseCase);
 
-      await expect(scheduler.expirarCobrancastVencidas()).resolves.toBeUndefined();
+      await expect(scheduler.expireOverdueCharges()).resolves.toBeUndefined();
       expect(expireChargeUseCase.execute).toHaveBeenCalledTimes(BATCH_LIMIT);
     });
   });

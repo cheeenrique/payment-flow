@@ -6,7 +6,7 @@ import type { IPasswordHasher } from '@/modules/auth/domain/ports/password-hashe
 import type { ITokenService, TokenPair } from '@/modules/auth/domain/ports/token-service.interface';
 import type { EventBusService } from '@/infra/messaging/event-bus.service';
 
-const usuarioFake = {
+const fakeUser = {
   id: 'user-uuid',
   name: 'João Teste',
   email: 'joao@example.com',
@@ -16,16 +16,16 @@ const usuarioFake = {
   updatedAt: new Date(),
 };
 
-const tokensFake: TokenPair = {
+const fakeTokens: TokenPair = {
   accessToken: 'access.token.jwt',
   refreshToken: 'refresh.token.jwt',
 };
 
-function criarMocks(userExists = true, senhaValida = true) {
+function makeMocks(userExists = true, validPassword = true) {
   const userRepo: jest.Mocked<IUserRepository> = {
     create: jest.fn(),
     findById: jest.fn(),
-    findByEmail: jest.fn().mockResolvedValue(userExists ? usuarioFake : null),
+    findByEmail: jest.fn().mockResolvedValue(userExists ? fakeUser : null),
   };
 
   const sessionRepo: jest.Mocked<ISessionRepository> = {
@@ -36,11 +36,11 @@ function criarMocks(userExists = true, senhaValida = true) {
 
   const passwordHasher: jest.Mocked<IPasswordHasher> = {
     hash: jest.fn().mockResolvedValue('$2b$10$newHash'),
-    compare: jest.fn().mockResolvedValue(senhaValida),
+    compare: jest.fn().mockResolvedValue(validPassword),
   };
 
   const tokenService: jest.Mocked<ITokenService> = {
-    generateTokenPair: jest.fn().mockReturnValue(tokensFake),
+    generateTokenPair: jest.fn().mockReturnValue(fakeTokens),
     generateAccessToken: jest.fn().mockReturnValue('access.token'),
     verifyRefreshToken: jest.fn(),
     getRefreshExpiresInMs: jest.fn().mockReturnValue(7 * 24 * 60 * 60 * 1000),
@@ -54,7 +54,7 @@ function criarMocks(userExists = true, senhaValida = true) {
   return { userRepo, sessionRepo, passwordHasher, tokenService, eventBus };
 }
 
-const inputValido: LoginInput = {
+const validInput: LoginInput = {
   email: 'joao@example.com',
   password: 'senha123',
 };
@@ -62,17 +62,17 @@ const inputValido: LoginInput = {
 describe('LoginUseCase', () => {
   describe('login bem-sucedido', () => {
     it('retorna accessToken e refreshToken para credenciais válidas', async () => {
-      const { userRepo, sessionRepo, passwordHasher, tokenService, eventBus } = criarMocks();
+      const { userRepo, sessionRepo, passwordHasher, tokenService, eventBus } = makeMocks();
       const useCase = new LoginUseCase(userRepo, sessionRepo, passwordHasher, tokenService, eventBus);
 
-      const tokens = await useCase.execute(inputValido);
+      const tokens = await useCase.execute(validInput);
 
-      expect(tokens.accessToken).toBe(tokensFake.accessToken);
-      expect(tokens.refreshToken).toBe(tokensFake.refreshToken);
+      expect(tokens.accessToken).toBe(fakeTokens.accessToken);
+      expect(tokens.refreshToken).toBe(fakeTokens.refreshToken);
     });
 
     it('normaliza email para lowercase e trim antes de buscar', async () => {
-      const { userRepo, sessionRepo, passwordHasher, tokenService, eventBus } = criarMocks();
+      const { userRepo, sessionRepo, passwordHasher, tokenService, eventBus } = makeMocks();
       const useCase = new LoginUseCase(userRepo, sessionRepo, passwordHasher, tokenService, eventBus);
 
       await useCase.execute({ email: '  JOAO@EXAMPLE.COM  ', password: 'senha123' });
@@ -81,23 +81,23 @@ describe('LoginUseCase', () => {
     });
 
     it('apaga sessão anterior antes de criar nova', async () => {
-      const { userRepo, sessionRepo, passwordHasher, tokenService, eventBus } = criarMocks();
+      const { userRepo, sessionRepo, passwordHasher, tokenService, eventBus } = makeMocks();
       const useCase = new LoginUseCase(userRepo, sessionRepo, passwordHasher, tokenService, eventBus);
 
-      await useCase.execute(inputValido);
+      await useCase.execute(validInput);
 
-      expect(sessionRepo.deleteByUserId).toHaveBeenCalledWith(usuarioFake.id);
+      expect(sessionRepo.deleteByUserId).toHaveBeenCalledWith(fakeUser.id);
       expect(sessionRepo.create).toHaveBeenCalledTimes(1);
     });
 
     it('persiste hash do refreshToken na sessão (nunca o token em texto plano)', async () => {
-      const { userRepo, sessionRepo, passwordHasher, tokenService, eventBus } = criarMocks();
+      const { userRepo, sessionRepo, passwordHasher, tokenService, eventBus } = makeMocks();
       const useCase = new LoginUseCase(userRepo, sessionRepo, passwordHasher, tokenService, eventBus);
 
-      await useCase.execute(inputValido);
+      await useCase.execute(validInput);
 
       // O hash é gerado a partir do refreshToken
-      expect(passwordHasher.hash).toHaveBeenCalledWith(tokensFake.refreshToken);
+      expect(passwordHasher.hash).toHaveBeenCalledWith(fakeTokens.refreshToken);
       // A sessão persistida deve ter o hash, não o token original
       expect(sessionRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({ refreshTokenHash: '$2b$10$newHash' }),
@@ -105,10 +105,10 @@ describe('LoginUseCase', () => {
     });
 
     it('publica evento UserLoggedInEvent no eventBus', async () => {
-      const { userRepo, sessionRepo, passwordHasher, tokenService, eventBus } = criarMocks();
+      const { userRepo, sessionRepo, passwordHasher, tokenService, eventBus } = makeMocks();
       const useCase = new LoginUseCase(userRepo, sessionRepo, passwordHasher, tokenService, eventBus);
 
-      await useCase.execute(inputValido);
+      await useCase.execute(validInput);
 
       expect(eventBus.publish).toHaveBeenCalledTimes(1);
       expect(eventBus.publish).toHaveBeenCalledWith(
@@ -117,17 +117,17 @@ describe('LoginUseCase', () => {
     });
 
     it('gera token com as permissões resolvidas a partir dos papéis do usuário', async () => {
-      const { userRepo, sessionRepo, passwordHasher, tokenService, eventBus } = criarMocks();
+      const { userRepo, sessionRepo, passwordHasher, tokenService, eventBus } = makeMocks();
       const useCase = new LoginUseCase(userRepo, sessionRepo, passwordHasher, tokenService, eventBus);
 
-      await useCase.execute(inputValido);
+      await useCase.execute(validInput);
 
       // viewer deve ter permissões não-wildcard
       expect(tokenService.generateTokenPair).toHaveBeenCalledWith(
         expect.objectContaining({
-          userId: usuarioFake.id,
-          email: usuarioFake.email,
-          roles: usuarioFake.roles,
+          userId: fakeUser.id,
+          email: fakeUser.email,
+          roles: fakeUser.roles,
           permissions: expect.any(Array),
         }),
       );
@@ -136,17 +136,17 @@ describe('LoginUseCase', () => {
 
   describe('email não encontrado', () => {
     it('lança UnauthorizedError com mensagem genérica (não revela que o email não existe)', async () => {
-      const { userRepo, sessionRepo, passwordHasher, tokenService, eventBus } = criarMocks(false);
+      const { userRepo, sessionRepo, passwordHasher, tokenService, eventBus } = makeMocks(false);
       const useCase = new LoginUseCase(userRepo, sessionRepo, passwordHasher, tokenService, eventBus);
 
-      await expect(useCase.execute(inputValido)).rejects.toThrow(UnauthorizedError);
+      await expect(useCase.execute(validInput)).rejects.toThrow(UnauthorizedError);
     });
 
     it('não chama compare de senha quando usuário não existe', async () => {
-      const { userRepo, sessionRepo, passwordHasher, tokenService, eventBus } = criarMocks(false);
+      const { userRepo, sessionRepo, passwordHasher, tokenService, eventBus } = makeMocks(false);
       const useCase = new LoginUseCase(userRepo, sessionRepo, passwordHasher, tokenService, eventBus);
 
-      await expect(useCase.execute(inputValido)).rejects.toThrow();
+      await expect(useCase.execute(validInput)).rejects.toThrow();
 
       expect(passwordHasher.compare).not.toHaveBeenCalled();
     });
@@ -154,17 +154,17 @@ describe('LoginUseCase', () => {
 
   describe('senha inválida', () => {
     it('lança UnauthorizedError com mensagem genérica (não revela que a senha está errada)', async () => {
-      const { userRepo, sessionRepo, passwordHasher, tokenService, eventBus } = criarMocks(true, false);
+      const { userRepo, sessionRepo, passwordHasher, tokenService, eventBus } = makeMocks(true, false);
       const useCase = new LoginUseCase(userRepo, sessionRepo, passwordHasher, tokenService, eventBus);
 
-      await expect(useCase.execute(inputValido)).rejects.toThrow(UnauthorizedError);
+      await expect(useCase.execute(validInput)).rejects.toThrow(UnauthorizedError);
     });
 
     it('não gera tokens nem cria sessão quando a senha é inválida', async () => {
-      const { userRepo, sessionRepo, passwordHasher, tokenService, eventBus } = criarMocks(true, false);
+      const { userRepo, sessionRepo, passwordHasher, tokenService, eventBus } = makeMocks(true, false);
       const useCase = new LoginUseCase(userRepo, sessionRepo, passwordHasher, tokenService, eventBus);
 
-      await expect(useCase.execute(inputValido)).rejects.toThrow();
+      await expect(useCase.execute(validInput)).rejects.toThrow();
 
       expect(tokenService.generateTokenPair).not.toHaveBeenCalled();
       expect(sessionRepo.create).not.toHaveBeenCalled();
@@ -172,10 +172,10 @@ describe('LoginUseCase', () => {
     });
 
     it('UnauthorizedError usa statusCode 401', async () => {
-      const { userRepo, sessionRepo, passwordHasher, tokenService, eventBus } = criarMocks(true, false);
+      const { userRepo, sessionRepo, passwordHasher, tokenService, eventBus } = makeMocks(true, false);
       const useCase = new LoginUseCase(userRepo, sessionRepo, passwordHasher, tokenService, eventBus);
 
-      const err = await useCase.execute(inputValido).catch((e) => e);
+      const err = await useCase.execute(validInput).catch((e) => e);
 
       expect(err.statusCode).toBe(401);
     });

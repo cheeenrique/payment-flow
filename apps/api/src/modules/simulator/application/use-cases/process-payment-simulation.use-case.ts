@@ -75,7 +75,7 @@ export class ProcessPaymentSimulationUseCase {
     }
 
     // Resolução durável — persiste no Mongo; cron emite quando dueAt <= now
-    await this.agendarVeredito(input, outcome);
+    await this.scheduleVerdict(input, outcome);
   }
 
   // ─── Cálculo do resultado por método ────────────────────────────────────────
@@ -193,7 +193,7 @@ export class ProcessPaymentSimulationUseCase {
 
   // ─── Agendamento durável (delay > 0) ────────────────────────────────────────
 
-  private async agendarVeredito(
+  private async scheduleVerdict(
     input: ProcessPaymentSimulationInput,
     outcome: SimulationOutcome,
   ): Promise<void> {
@@ -207,7 +207,7 @@ export class ProcessPaymentSimulationUseCase {
     }
 
     const verdictOutcome = outcome.approved ? 'approved' : 'failed';
-    const failureReason = this.resolverFailureReason(outcome);
+    const failureReason = this.resolveFailureReason(outcome);
     const verdict = ScheduledVerdict.schedule(
       input.paymentId,
       input.correlationId,
@@ -228,7 +228,7 @@ export class ProcessPaymentSimulationUseCase {
    * Determina a razão de falha a persistir no veredito.
    * Garante que erros sistêmicos sem failureReason explícita usem 'system_error'.
    */
-  private resolverFailureReason(outcome: SimulationOutcome): SimulatorFailureReason | undefined {
+  private resolveFailureReason(outcome: SimulationOutcome): SimulatorFailureReason | undefined {
     if (outcome.approved) return undefined;
     if (outcome.systemError) return 'system_error';
     return outcome.failureReason ?? 'card_declined';

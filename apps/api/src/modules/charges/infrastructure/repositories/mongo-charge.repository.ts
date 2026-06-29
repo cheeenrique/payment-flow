@@ -23,7 +23,8 @@ interface ChargeLean {
   currency: string;
   description?: string;
   status: string;
-  paymentMethod: string;
+  paymentLinkToken: string;
+  paymentMethod?: string | null;
   expiresAt: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -84,6 +85,11 @@ export class MongoChargeRepository implements IChargeRepository {
     return docs.map((doc) => this.toDomain(doc));
   }
 
+  async findByPaymentLinkToken(token: string): Promise<Charge | null> {
+    const doc = await this.model.findOne({ paymentLinkToken: token }).lean<ChargeLean>().exec();
+    return doc ? this.toDomain(doc) : null;
+  }
+
   async countByStatus(): Promise<Record<string, number>> {
     const results = await this.model
       .aggregate<{ _id: string; count: number }>([
@@ -121,7 +127,8 @@ export class MongoChargeRepository implements IChargeRepository {
       currency: doc.currency,
       description: doc.description,
       status: doc.status as ChargeStatus,
-      paymentMethod: doc.paymentMethod as PaymentMethod,
+      paymentLinkToken: doc.paymentLinkToken,
+      paymentMethod: doc.paymentMethod ? (doc.paymentMethod as PaymentMethod) : null,
       expiresAt: doc.expiresAt,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
@@ -137,6 +144,7 @@ export class MongoChargeRepository implements IChargeRepository {
       currency: charge.currency,
       description: charge.description,
       status: charge.status,
+      paymentLinkToken: charge.paymentLinkToken,
       paymentMethod: charge.paymentMethod,
       expiresAt: charge.expiresAt,
     };

@@ -53,7 +53,13 @@ export class ProcessInvoiceUseCase {
     );
     this.sseService.emit({
       type: 'invoice.processing',
-      data: { invoiceId: invoice.id, paymentId: invoice.paymentId, status: 'processing' },
+      data: {
+        id: invoice.id,
+        invoiceId: invoice.id,
+        paymentId: invoice.paymentId,
+        chargeId: invoice.chargeId,
+        status: 'processing',
+      },
     });
 
     return processing;
@@ -81,8 +87,10 @@ export class ProcessInvoiceUseCase {
     this.sseService.emit({
       type: 'invoice.issued',
       data: {
+        id: issued.id,
         invoiceId: issued.id,
         paymentId: issued.paymentId,
+        chargeId: issued.chargeId,
         status: 'issued',
         externalReference: referencia,
         issuedAt,
@@ -101,7 +109,13 @@ export class ProcessInvoiceUseCase {
     );
     this.sseService.emit({
       type: 'invoice.failed',
-      data: { invoiceId: failed.id, paymentId: failed.paymentId, status: 'failed' },
+      data: {
+        id: failed.id,
+        invoiceId: failed.id,
+        paymentId: failed.paymentId,
+        chargeId: failed.chargeId,
+        status: 'failed',
+      },
     });
 
     this.logger.warn(`Falha simulada na emissão da invoice: id=${failed.id}`);

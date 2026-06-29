@@ -8,34 +8,34 @@ const baseCreateProps = {
   method: 'pix' as const,
 };
 
-function criarPagamento(overrides: Partial<typeof baseCreateProps> = {}): Payment {
+function makePayment(overrides: Partial<typeof baseCreateProps> = {}): Payment {
   return Payment.create({ ...baseCreateProps, ...overrides });
 }
 
 describe('Payment.create', () => {
   it('cria pagamento com status inicial pending', () => {
-    const payment = criarPagamento();
+    const payment = makePayment();
 
     expect(payment.status).toBe('pending');
   });
 
   it('gera id único (uuid) em cada criação', () => {
-    const p1 = criarPagamento();
-    const p2 = criarPagamento();
+    const p1 = makePayment();
+    const p2 = makePayment();
 
     expect(p1.id).toBeTruthy();
     expect(p1.id).not.toBe(p2.id);
   });
 
   it('define createdAt e updatedAt como Date', () => {
-    const payment = criarPagamento();
+    const payment = makePayment();
 
     expect(payment.createdAt).toBeInstanceOf(Date);
     expect(payment.updatedAt).toBeInstanceOf(Date);
   });
 
   it('preserva amount, method, chargeId e customerId fornecidos', () => {
-    const payment = criarPagamento();
+    const payment = makePayment();
 
     expect(payment.amount).toBe(5000);
     expect(payment.method).toBe('pix');
@@ -46,14 +46,14 @@ describe('Payment.create', () => {
 
 describe('Payment.startProcessing', () => {
   it('transita de pending para processing com sucesso', () => {
-    const payment = criarPagamento();
+    const payment = makePayment();
     const processing = payment.startProcessing();
 
     expect(processing.status).toBe('processing');
   });
 
   it('não muta a instância original', () => {
-    const payment = criarPagamento();
+    const payment = makePayment();
     const processing = payment.startProcessing();
 
     expect(payment.status).toBe('pending');
@@ -61,19 +61,19 @@ describe('Payment.startProcessing', () => {
   });
 
   it('lança ConflictError ao tentar iniciar processamento a partir de processing', () => {
-    const payment = criarPagamento().startProcessing();
+    const payment = makePayment().startProcessing();
 
     expect(() => payment.startProcessing()).toThrow(ConflictError);
   });
 
   it('lança ConflictError ao tentar iniciar processamento a partir de approved', () => {
-    const payment = criarPagamento().startProcessing().approve();
+    const payment = makePayment().startProcessing().approve();
 
     expect(() => payment.startProcessing()).toThrow(ConflictError);
   });
 
   it('ConflictError carrega o status atual no context', () => {
-    const payment = criarPagamento().startProcessing();
+    const payment = makePayment().startProcessing();
 
     expect(() => payment.startProcessing()).toThrow(
       expect.objectContaining({
@@ -86,7 +86,7 @@ describe('Payment.startProcessing', () => {
 
 describe('Payment.approve', () => {
   it('transita de processing para approved com sucesso', () => {
-    const payment = criarPagamento().startProcessing();
+    const payment = makePayment().startProcessing();
     const approved = payment.approve();
 
     expect(approved.status).toBe('approved');
@@ -94,13 +94,13 @@ describe('Payment.approve', () => {
 
   it('persiste providerResponse quando fornecida', () => {
     const response = { psp: 'ok', txId: 'pix-123' };
-    const approved = criarPagamento().startProcessing().approve(response);
+    const approved = makePayment().startProcessing().approve(response);
 
     expect(approved.providerResponse).toEqual(response);
   });
 
   it('não muta a instância original', () => {
-    const processing = criarPagamento().startProcessing();
+    const processing = makePayment().startProcessing();
     const approved = processing.approve();
 
     expect(processing.status).toBe('processing');
@@ -108,13 +108,13 @@ describe('Payment.approve', () => {
   });
 
   it('lança ConflictError ao tentar aprovar a partir de pending (fora de ordem)', () => {
-    const payment = criarPagamento();
+    const payment = makePayment();
 
     expect(() => payment.approve()).toThrow(ConflictError);
   });
 
   it('lança ConflictError ao tentar aprovar a partir de approved', () => {
-    const payment = criarPagamento().startProcessing().approve();
+    const payment = makePayment().startProcessing().approve();
 
     expect(() => payment.approve()).toThrow(ConflictError);
   });
@@ -122,7 +122,7 @@ describe('Payment.approve', () => {
 
 describe('Payment.fail', () => {
   it('transita de processing para failed com motivo informado', () => {
-    const payment = criarPagamento().startProcessing();
+    const payment = makePayment().startProcessing();
     const failed = payment.fail('saldo insuficiente');
 
     expect(failed.status).toBe('failed');
@@ -130,7 +130,7 @@ describe('Payment.fail', () => {
   });
 
   it('não muta a instância original', () => {
-    const processing = criarPagamento().startProcessing();
+    const processing = makePayment().startProcessing();
     const failed = processing.fail('motivo');
 
     expect(processing.status).toBe('processing');
@@ -138,13 +138,13 @@ describe('Payment.fail', () => {
   });
 
   it('lança ConflictError ao tentar falhar a partir de pending', () => {
-    const payment = criarPagamento();
+    const payment = makePayment();
 
     expect(() => payment.fail('motivo')).toThrow(ConflictError);
   });
 
   it('lança ConflictError ao tentar falhar a partir de approved', () => {
-    const payment = criarPagamento().startProcessing().approve();
+    const payment = makePayment().startProcessing().approve();
 
     expect(() => payment.fail('motivo')).toThrow(ConflictError);
   });
@@ -152,50 +152,50 @@ describe('Payment.fail', () => {
 
 describe('Payment.isTerminal', () => {
   it('retorna false para status pending', () => {
-    expect(criarPagamento().isTerminal()).toBe(false);
+    expect(makePayment().isTerminal()).toBe(false);
   });
 
   it('retorna false para status processing', () => {
-    expect(criarPagamento().startProcessing().isTerminal()).toBe(false);
+    expect(makePayment().startProcessing().isTerminal()).toBe(false);
   });
 
   it('retorna true para status approved', () => {
-    expect(criarPagamento().startProcessing().approve().isTerminal()).toBe(true);
+    expect(makePayment().startProcessing().approve().isTerminal()).toBe(true);
   });
 
   it('retorna true para status failed', () => {
-    expect(criarPagamento().startProcessing().fail('razão').isTerminal()).toBe(true);
+    expect(makePayment().startProcessing().fail('razão').isTerminal()).toBe(true);
   });
 
   it('retorna true para status expired', () => {
-    expect(criarPagamento().expire().isTerminal()).toBe(true);
+    expect(makePayment().expire().isTerminal()).toBe(true);
   });
 });
 
 describe('Payment.expire', () => {
   it('transita de pending para expired', () => {
-    const payment = criarPagamento();
+    const payment = makePayment();
     const expired = payment.expire();
 
     expect(expired.status).toBe('expired');
   });
 
   it('transita de processing para expired', () => {
-    const payment = criarPagamento().startProcessing();
+    const payment = makePayment().startProcessing();
     const expired = payment.expire();
 
     expect(expired.status).toBe('expired');
   });
 
   it('define failureReason informando o motivo da expiração', () => {
-    const payment = criarPagamento();
+    const payment = makePayment();
     const expired = payment.expire();
 
     expect(expired.failureReason).toBeTruthy();
   });
 
   it('não muta a instância original', () => {
-    const payment = criarPagamento();
+    const payment = makePayment();
     const expired = payment.expire();
 
     expect(payment.status).toBe('pending');
@@ -203,25 +203,25 @@ describe('Payment.expire', () => {
   });
 
   it('lança ConflictError ao tentar expirar a partir de approved', () => {
-    const payment = criarPagamento().startProcessing().approve();
+    const payment = makePayment().startProcessing().approve();
 
     expect(() => payment.expire()).toThrow(ConflictError);
   });
 
   it('lança ConflictError ao tentar expirar a partir de failed', () => {
-    const payment = criarPagamento().startProcessing().fail('motivo');
+    const payment = makePayment().startProcessing().fail('motivo');
 
     expect(() => payment.expire()).toThrow(ConflictError);
   });
 
   it('lança ConflictError ao tentar reexpirar pagamento já expirado', () => {
-    const payment = criarPagamento().expire();
+    const payment = makePayment().expire();
 
     expect(() => payment.expire()).toThrow(ConflictError);
   });
 
   it('ConflictError carrega o status atual no context', () => {
-    const payment = criarPagamento().startProcessing().approve();
+    const payment = makePayment().startProcessing().approve();
 
     expect(() => payment.expire()).toThrow(
       expect.objectContaining({

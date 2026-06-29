@@ -36,14 +36,14 @@ export class CreateInvoiceUseCase {
     const existing = await this.repo.findByPaymentId(input.paymentId);
 
     if (existing) {
-      return this.resolverExistente(existing, input);
+      return this.resolveExisting(existing, input);
     }
 
-    return this.criarEProcessar(input);
+    return this.createAndProcess(input);
   }
 
   /** Trata invoice já existente para o mesmo paymentId */
-  private async resolverExistente(invoice: Invoice, input: CreateInvoiceInput): Promise<Invoice> {
+  private async resolveExisting(invoice: Invoice, input: CreateInvoiceInput): Promise<Invoice> {
     if (invoice.isIssued()) {
       throw new ConflictError('Invoice já emitida para este pagamento', undefined, {
         paymentId: input.paymentId,
@@ -67,7 +67,7 @@ export class CreateInvoiceUseCase {
     return reset;
   }
 
-  private async criarEProcessar(input: CreateInvoiceInput): Promise<Invoice> {
+  private async createAndProcess(input: CreateInvoiceInput): Promise<Invoice> {
     const invoice = Invoice.create({
       paymentId: input.paymentId,
       chargeId: input.chargeId,

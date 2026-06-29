@@ -72,7 +72,15 @@ export class CreatePaymentUseCase {
     // Empurra atualização em tempo real via SSE
     this.sseService.emit({
       type: 'payment.created',
-      data: { paymentId: payment.id, chargeId: payment.chargeId, status: payment.status },
+      data: {
+        id: payment.id,
+        paymentId: payment.id,
+        chargeId: payment.chargeId,
+        customerId: payment.customerId,
+        amount: payment.amount,
+        method: payment.method,
+        status: payment.status,
+      },
     });
 
     return { paymentId: payment.id, status: payment.status, deduplicated: false };

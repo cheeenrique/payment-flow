@@ -38,7 +38,7 @@ export class ChargeExpirationScheduler {
    * se a frequência precisar ser configurável por ambiente.
    */
   @Cron(CronExpression.EVERY_MINUTE)
-  async expirarCobrancastVencidas(): Promise<void> {
+  async expireOverdueCharges(): Promise<void> {
     const now = new Date();
     const charges = await this.chargeRepo.findExpirable(
       now,
@@ -59,7 +59,7 @@ export class ChargeExpirationScheduler {
     // Processa em paralelo; Promise.allSettled garante que uma falha não
     // interrompe o restante do lote
     const resultados = await Promise.allSettled(
-      charges.map((charge) => this.expirarUma(charge.id)),
+      charges.map((charge) => this.expireOne(charge.id)),
     );
 
     const falhas = resultados.filter((r) => r.status === 'rejected').length;
@@ -69,7 +69,7 @@ export class ChargeExpirationScheduler {
   }
 
   /** Expira uma cobrança individual, tratando race conditions de forma idempotente */
-  private async expirarUma(chargeId: string): Promise<void> {
+  private async expireOne(chargeId: string): Promise<void> {
     try {
       await this.expireChargeUseCase.execute(chargeId);
       this.logger.log(`Cobrança expirada pelo scheduler: chargeId=${chargeId}`);

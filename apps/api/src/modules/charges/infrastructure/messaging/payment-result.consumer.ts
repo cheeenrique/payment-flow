@@ -107,7 +107,17 @@ export class PaymentResultConsumer {
 
       this.sseService.emit({
         type: 'charge.updated',
-        data: { chargeId: updated.id, status: updated.status, customerId: updated.customerId },
+        data: {
+          id: updated.id,
+          chargeId: updated.id,
+          customerId: updated.customerId,
+          amount: updated.amount,
+          currency: updated.currency,
+          status: updated.status,
+          paymentMethod: updated.paymentMethod,
+          createdAt: updated.createdAt,
+          updatedAt: updated.updatedAt,
+        },
       });
 
       this.logger.log(

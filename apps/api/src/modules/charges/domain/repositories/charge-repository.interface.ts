@@ -36,4 +36,6 @@ export interface IChargeRepository {
    * Somente statuses com documentos existentes aparecem no mapa retornado.
    */
   countByStatus(): Promise<Record<string, number>>;
+  /** Localiza cobrança pelo token do link de pagamento. Retorna null quando não encontrada. */
+  findByPaymentLinkToken(token: string): Promise<Charge | null>;
 }

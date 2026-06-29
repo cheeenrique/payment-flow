@@ -8,12 +8,12 @@ import type { PaginatedResult } from '@/shared/pagination/paginated-result.inter
 const SSE_METADATA_KEY = '__sse__';
 
 /** Cria um CallHandler que emite o valor fornecido */
-function criarCallHandler(value: unknown) {
+function makeCallHandler(value: unknown) {
   return { handle: jest.fn().mockReturnValue(of(value)) };
 }
 
 /** Cria um ExecutionContext HTTP genérico */
-function criarContextoHttp(handler: object = {}): ExecutionContext {
+function makeHttpContext(handler: object = {}): ExecutionContext {
   return {
     getType: jest.fn().mockReturnValue('http'),
     getHandler: jest.fn().mockReturnValue(handler),
@@ -21,7 +21,7 @@ function criarContextoHttp(handler: object = {}): ExecutionContext {
 }
 
 /** Cria um ExecutionContext GraphQL */
-function criarContextoGql(): ExecutionContext {
+function makeGqlContext(): ExecutionContext {
   return {
     getType: jest.fn().mockReturnValue('graphql'),
     getHandler: jest.fn().mockReturnValue({}),
@@ -41,8 +41,8 @@ describe('TransformInterceptor', () => {
 
   describe('envelope padrão HTTP', () => {
     it('envelopa resposta simples em { data, meta: { timestamp } }', async () => {
-      const ctx = criarContextoHttp();
-      const handler = criarCallHandler({ id: 'abc', name: 'Teste' });
+      const ctx = makeHttpContext();
+      const handler = makeCallHandler({ id: 'abc', name: 'Teste' });
 
       const result = await lastValueFrom(interceptor.intercept(ctx, handler));
 
@@ -55,8 +55,8 @@ describe('TransformInterceptor', () => {
     });
 
     it('meta.timestamp é uma string ISO 8601 válida', async () => {
-      const ctx = criarContextoHttp();
-      const handler = criarCallHandler('qualquer valor');
+      const ctx = makeHttpContext();
+      const handler = makeCallHandler('qualquer valor');
 
       const result = await lastValueFrom(interceptor.intercept(ctx, handler)) as Record<string, unknown>;
       const meta = result['meta'] as Record<string, unknown>;
@@ -66,8 +66,8 @@ describe('TransformInterceptor', () => {
     });
 
     it('não adiciona meta.pagination para resposta não paginada', async () => {
-      const ctx = criarContextoHttp();
-      const handler = criarCallHandler({ status: 'ok' });
+      const ctx = makeHttpContext();
+      const handler = makeCallHandler({ status: 'ok' });
 
       const result = await lastValueFrom(interceptor.intercept(ctx, handler)) as Record<string, unknown>;
       const meta = result['meta'] as Record<string, unknown>;
@@ -79,8 +79,8 @@ describe('TransformInterceptor', () => {
   describe('PaginatedResult', () => {
     it('extrai items em data e calcula meta.pagination para PaginatedResult', async () => {
       const paginado: PaginatedResult<string> = { items: ['a', 'b'], total: 20, page: 1, limit: 10 };
-      const ctx = criarContextoHttp();
-      const handler = criarCallHandler(paginado);
+      const ctx = makeHttpContext();
+      const handler = makeCallHandler(paginado);
 
       const result = await lastValueFrom(interceptor.intercept(ctx, handler)) as Record<string, unknown>;
       const meta = result['meta'] as Record<string, unknown>;
@@ -96,8 +96,8 @@ describe('TransformInterceptor', () => {
 
     it('calcula hasPrev=true quando page > 1', async () => {
       const paginado: PaginatedResult<number> = { items: [1], total: 30, page: 3, limit: 10 };
-      const ctx = criarContextoHttp();
-      const handler = criarCallHandler(paginado);
+      const ctx = makeHttpContext();
+      const handler = makeCallHandler(paginado);
 
       const result = await lastValueFrom(interceptor.intercept(ctx, handler)) as Record<string, unknown>;
       const pagination = (result['meta'] as Record<string, unknown>)['pagination'] as Record<string, unknown>;
@@ -108,9 +108,9 @@ describe('TransformInterceptor', () => {
 
   describe('contexto GraphQL — sem envelope', () => {
     it('passa o valor sem modificação no contexto graphql', async () => {
-      const ctx = criarContextoGql();
+      const ctx = makeGqlContext();
       const payload = { data: { user: { id: '1' } } };
-      const handler = criarCallHandler(payload);
+      const handler = makeCallHandler(payload);
 
       const result = await lastValueFrom(interceptor.intercept(ctx, handler));
 
@@ -121,10 +121,10 @@ describe('TransformInterceptor', () => {
   describe('contexto SSE — sem envelope', () => {
     it('passa o valor sem modificação quando handler é marcado como SSE', async () => {
       const handler = {};
-      const ctx = criarContextoHttp(handler);
+      const ctx = makeHttpContext(handler);
       // Simula o reflector retornando true para SSE_METADATA_KEY
       reflector.get.mockImplementation((key) => key === SSE_METADATA_KEY);
-      const callHandler = criarCallHandler('sse-event');
+      const callHandler = makeCallHandler('sse-event');
 
       const result = await lastValueFrom(interceptor.intercept(ctx, callHandler));
 
@@ -134,8 +134,8 @@ describe('TransformInterceptor', () => {
 
   describe('resposta undefined/null — sem envelope', () => {
     it('retorna undefined sem envelope para handlers void', async () => {
-      const ctx = criarContextoHttp();
-      const handler = criarCallHandler(undefined);
+      const ctx = makeHttpContext();
+      const handler = makeCallHandler(undefined);
 
       const result = await lastValueFrom(interceptor.intercept(ctx, handler));
 
@@ -143,8 +143,8 @@ describe('TransformInterceptor', () => {
     });
 
     it('retorna null sem envelope para resposta null', async () => {
-      const ctx = criarContextoHttp();
-      const handler = criarCallHandler(null);
+      const ctx = makeHttpContext();
+      const handler = makeCallHandler(null);
 
       const result = await lastValueFrom(interceptor.intercept(ctx, handler));
 

@@ -33,7 +33,8 @@ export interface ChargeProps {
   currency: string;
   description?: string;
   status: ChargeStatus;
-  paymentMethod: PaymentMethod;
+  paymentLinkToken: string;
+  paymentMethod: PaymentMethod | null;
   expiresAt: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -53,7 +54,8 @@ export class Charge {
   readonly currency: string;
   readonly description?: string;
   readonly status: ChargeStatus;
-  readonly paymentMethod: PaymentMethod;
+  readonly paymentLinkToken: string;
+  readonly paymentMethod: PaymentMethod | null;
   readonly expiresAt: Date;
   readonly createdAt: Date;
   readonly updatedAt: Date;
@@ -65,21 +67,26 @@ export class Charge {
     this.currency = props.currency;
     this.description = props.description;
     this.status = props.status;
+    this.paymentLinkToken = props.paymentLinkToken;
     this.paymentMethod = props.paymentMethod;
     this.expiresAt = props.expiresAt;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
   }
 
-  /** Cria uma nova cobrança com status inicial "pending" */
+  /** Cria uma nova cobrança com status inicial "pending" e token de link gerado automaticamente */
   static create(
-    props: Omit<ChargeProps, 'id' | 'status' | 'createdAt' | 'updatedAt'>,
+    props: Omit<ChargeProps, 'id' | 'status' | 'createdAt' | 'updatedAt' | 'paymentLinkToken' | 'paymentMethod'> & {
+      paymentMethod?: PaymentMethod | null;
+    },
   ): Charge {
     const now = new Date();
     return new Charge({
       ...props,
       id: randomUUID(),
+      paymentLinkToken: randomUUID().replace(/-/g, ''),
       status: ChargeStatus.PENDING,
+      paymentMethod: props.paymentMethod ?? null,
       createdAt: now,
       updatedAt: now,
     });
@@ -186,6 +193,35 @@ export class Charge {
     });
   }
 
+  /**
+   * Seleciona o método de pagamento e solicita o pagamento, transitando para "awaiting_payment".
+   * Guarda 1: lança ConflictError se a cobrança está em estado terminal.
+   * Guarda 2: lança ConflictError se o método de pagamento já foi definido.
+   * Imutável: retorna nova instância sem mutar a atual.
+   */
+  selectMethodAndRequestPayment(method: PaymentMethod): Charge {
+    if (this.isTerminal()) {
+      throw new ConflictError(
+        `Transição inválida: cobrança em "${this.status}" não pode ter método de pagamento selecionado`,
+        undefined,
+        { chargeId: this.id, currentStatus: this.status },
+      );
+    }
+    if (this.paymentMethod !== null && this.paymentMethod !== method) {
+      throw new ConflictError(
+        `Transição inválida: cobrança já possui método de pagamento definido como "${this.paymentMethod}"`,
+        undefined,
+        { chargeId: this.id, currentStatus: this.status },
+      );
+    }
+    return new Charge({
+      ...this.snapshot(),
+      paymentMethod: method,
+      status: ChargeStatus.AWAITING_PAYMENT,
+      updatedAt: new Date(),
+    });
+  }
+
   /** Cópia imutável das props atuais para compor transições de estado */
   private snapshot(): ChargeProps {
     return {
@@ -195,6 +231,7 @@ export class Charge {
       currency: this.currency,
       description: this.description,
       status: this.status,
+      paymentLinkToken: this.paymentLinkToken,
       paymentMethod: this.paymentMethod,
       expiresAt: this.expiresAt,
       createdAt: this.createdAt,

@@ -3,7 +3,6 @@ import { randomUUID } from 'node:crypto';
 import { Charge, PaymentMethod } from '@/modules/charges/domain/entities/charge.entity';
 import type { IChargeRepository } from '@/modules/charges/domain/repositories/charge-repository.interface';
 import { ChargeCreatedEvent } from '@/modules/charges/domain/events/charge-created.event';
-import { ChargePaymentRequestedEvent } from '@/modules/charges/domain/events/charge-payment-requested.event';
 import { EventBusService } from '@/infra/messaging/event-bus.service';
 import { SseService } from '@/infra/sse/sse.service';
 import { CHARGE_REPOSITORY } from '@/modules/charges/charges.tokens';
@@ -11,7 +10,8 @@ import { CHARGE_REPOSITORY } from '@/modules/charges/charges.tokens';
 export interface CreateChargeInput {
   customerId: string;
   amount: number;
-  paymentMethod: PaymentMethod;
+  /** Método de pagamento é opcional — será definido no confirm do checkout (Task 2.5) */
+  paymentMethod?: PaymentMethod | null;
   description?: string;
   expiresAt: Date;
 }
@@ -23,7 +23,8 @@ export interface CreateChargeOutput {
   currency: string;
   description?: string;
   status: string;
-  paymentMethod: string;
+  paymentMethod: string | null;
+  paymentLinkToken: string;
   expiresAt: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -72,23 +73,21 @@ export class CreateChargeUseCase {
       }),
     );
 
-    // Charge nasce aguardando pagamento -> solicita o início do fluxo ao Payments.
-    // Mesmo correlationId liga charge.created e charge.payment_requested no rastreio.
-    this.eventBus.publish(
-      new ChargePaymentRequestedEvent(charge.id, correlationId, {
-        customerId: charge.customerId,
-        amount: charge.amount,
-        method: charge.paymentMethod,
-      }),
-    );
+    // charge.payment_requested.v1 NÃO é emitido aqui.
+    // O pagamento só é iniciado quando o cliente confirma no checkout (Task 2.5).
 
     this.sseService.emit({
       type: 'charge.created',
       data: {
+        id: charge.id,
         chargeId: charge.id,
         customerId: charge.customerId,
-        status: charge.status,
         amount: charge.amount,
+        currency: charge.currency,
+        status: charge.status,
+        paymentMethod: charge.paymentMethod,
+        createdAt: charge.createdAt,
+        updatedAt: charge.updatedAt,
       },
     });
   }
@@ -102,6 +101,7 @@ export class CreateChargeUseCase {
       description: charge.description,
       status: charge.status,
       paymentMethod: charge.paymentMethod,
+      paymentLinkToken: charge.paymentLinkToken,
       expiresAt: charge.expiresAt,
       createdAt: charge.createdAt,
       updatedAt: charge.updatedAt,

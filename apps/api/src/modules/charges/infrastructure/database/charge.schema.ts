@@ -32,9 +32,15 @@ export class ChargeModel {
   @Prop({ required: true, index: true })
   status!: string;
 
-  /** Método de pagamento: pix | boleto | credit_card */
-  @Prop({ required: true })
-  paymentMethod!: string;
+  /** Token único de link de pagamento — gerado no domínio, imutável */
+  @Prop({ required: true, unique: true })
+  paymentLinkToken!: string;
+
+  /** Método de pagamento: pix | boleto | credit_card — null até seleção pelo cliente */
+  // type explícito: o tipo TS é union (string | null) e o Mongoose não infere
+  // o tipo a partir de union — sem isto o decorator @Prop quebra no boot.
+  @Prop({ type: String, required: false, default: null })
+  paymentMethod?: string | null;
 
   /** Data/hora de expiração da cobrança */
   @Prop({ required: true })

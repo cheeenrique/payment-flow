@@ -69,7 +69,15 @@ export class SimulatorVerdictConsumer {
 
       this.sseService.emit({
         type: 'payment.approved',
-        data: { paymentId: approved.id, chargeId: approved.chargeId, status: 'approved' },
+        data: {
+          id: approved.id,
+          paymentId: approved.id,
+          chargeId: approved.chargeId,
+          customerId: approved.customerId,
+          amount: approved.amount,
+          method: approved.method,
+          status: 'approved',
+        },
       });
 
       this.logger.log(`Pagamento aprovado: paymentId=${approved.id} chargeId=${approved.chargeId}`);
@@ -125,7 +133,16 @@ export class SimulatorVerdictConsumer {
 
       this.sseService.emit({
         type: 'payment.failed',
-        data: { paymentId: failed.id, chargeId: failed.chargeId, status: 'failed', reason },
+        data: {
+          id: failed.id,
+          paymentId: failed.id,
+          chargeId: failed.chargeId,
+          customerId: failed.customerId,
+          amount: failed.amount,
+          method: failed.method,
+          status: 'failed',
+          reason,
+        },
       });
 
       this.logger.log(`Pagamento recusado: paymentId=${failed.id} reason=${reason}`);

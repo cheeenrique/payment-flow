@@ -10,17 +10,18 @@ const baseChargeProps = {
   customerId: 'customer-uuid',
   amount: 10000,
   currency: 'BRL',
-  paymentMethod: PaymentMethod.PIX,
+  paymentMethod: PaymentMethod.PIX as PaymentMethod | null,
+  paymentLinkToken: 'aaaaaaaabbbbbbbbcccccccc00000001',
   expiresAt: new Date(Date.now() - 3600_000), // vencida há 1 hora
   createdAt: new Date(),
   updatedAt: new Date(),
 };
 
-function criarCobrancaComStatus(status: ChargeStatus): Charge {
+function makeChargeWithStatus(status: ChargeStatus): Charge {
   return new Charge({ id: 'charge-uuid', ...baseChargeProps, status });
 }
 
-function criarMocks(chargeFake: Charge | null = null) {
+function makeMocks(chargeFake: Charge | null = null) {
   const chargeRepo: jest.Mocked<IChargeRepository> = {
     create: jest.fn(),
     findById: jest.fn().mockResolvedValue(chargeFake),
@@ -28,6 +29,7 @@ function criarMocks(chargeFake: Charge | null = null) {
     update: jest.fn().mockResolvedValue(undefined),
     findExpirable: jest.fn(),
     countByStatus: jest.fn().mockResolvedValue({}),
+    findByPaymentLinkToken: jest.fn(),
   };
 
   const eventBus = {
@@ -46,14 +48,14 @@ function criarMocks(chargeFake: Charge | null = null) {
 describe('ExpireChargeUseCase', () => {
   describe('cobrança inexistente', () => {
     it('lança ChargeNotFoundError quando a cobrança não é encontrada', async () => {
-      const { chargeRepo, eventBus, sseService } = criarMocks(null);
+      const { chargeRepo, eventBus, sseService } = makeMocks(null);
       const useCase = new ExpireChargeUseCase(chargeRepo, eventBus, sseService);
 
       await expect(useCase.execute('id-inexistente')).rejects.toThrow(ChargeNotFoundError);
     });
 
     it('não persiste nem publica evento quando cobrança não existe', async () => {
-      const { chargeRepo, eventBus, sseService } = criarMocks(null);
+      const { chargeRepo, eventBus, sseService } = makeMocks(null);
       const useCase = new ExpireChargeUseCase(chargeRepo, eventBus, sseService);
 
       await useCase.execute('id-inexistente').catch(() => undefined);
@@ -64,7 +66,7 @@ describe('ExpireChargeUseCase', () => {
     });
 
     it('ChargeNotFoundError carrega o id buscado no context', async () => {
-      const { chargeRepo, eventBus, sseService } = criarMocks(null);
+      const { chargeRepo, eventBus, sseService } = makeMocks(null);
       const useCase = new ExpireChargeUseCase(chargeRepo, eventBus, sseService);
 
       const err = await useCase.execute('id-invalido').catch((e) => e);
@@ -81,16 +83,16 @@ describe('ExpireChargeUseCase', () => {
       ChargeStatus.EXPIRED,
       ChargeStatus.FAILED,
     ])('lança ChargeCannotExpireError para status "%s"', async (status) => {
-      const charge = criarCobrancaComStatus(status);
-      const { chargeRepo, eventBus, sseService } = criarMocks(charge);
+      const charge = makeChargeWithStatus(status);
+      const { chargeRepo, eventBus, sseService } = makeMocks(charge);
       const useCase = new ExpireChargeUseCase(chargeRepo, eventBus, sseService);
 
       await expect(useCase.execute(charge.id)).rejects.toThrow(ChargeCannotExpireError);
     });
 
     it('não persiste nem publica evento quando cobrança já está expirada', async () => {
-      const charge = criarCobrancaComStatus(ChargeStatus.EXPIRED);
-      const { chargeRepo, eventBus, sseService } = criarMocks(charge);
+      const charge = makeChargeWithStatus(ChargeStatus.EXPIRED);
+      const { chargeRepo, eventBus, sseService } = makeMocks(charge);
       const useCase = new ExpireChargeUseCase(chargeRepo, eventBus, sseService);
 
       await useCase.execute(charge.id).catch(() => undefined);
@@ -103,8 +105,8 @@ describe('ExpireChargeUseCase', () => {
 
   describe('expiração bem-sucedida', () => {
     it('persiste cobrança com status expired a partir de pending', async () => {
-      const charge = criarCobrancaComStatus(ChargeStatus.PENDING);
-      const { chargeRepo, eventBus, sseService } = criarMocks(charge);
+      const charge = makeChargeWithStatus(ChargeStatus.PENDING);
+      const { chargeRepo, eventBus, sseService } = makeMocks(charge);
       const useCase = new ExpireChargeUseCase(chargeRepo, eventBus, sseService);
 
       await useCase.execute(charge.id);
@@ -116,8 +118,8 @@ describe('ExpireChargeUseCase', () => {
     });
 
     it('persiste cobrança com status expired a partir de awaiting_payment', async () => {
-      const charge = criarCobrancaComStatus(ChargeStatus.AWAITING_PAYMENT);
-      const { chargeRepo, eventBus, sseService } = criarMocks(charge);
+      const charge = makeChargeWithStatus(ChargeStatus.AWAITING_PAYMENT);
+      const { chargeRepo, eventBus, sseService } = makeMocks(charge);
       const useCase = new ExpireChargeUseCase(chargeRepo, eventBus, sseService);
 
       await useCase.execute(charge.id);
@@ -128,8 +130,8 @@ describe('ExpireChargeUseCase', () => {
     });
 
     it('publica evento charge.expired.v1 no eventBus após persistir', async () => {
-      const charge = criarCobrancaComStatus(ChargeStatus.PENDING);
-      const { chargeRepo, eventBus, sseService } = criarMocks(charge);
+      const charge = makeChargeWithStatus(ChargeStatus.PENDING);
+      const { chargeRepo, eventBus, sseService } = makeMocks(charge);
       const useCase = new ExpireChargeUseCase(chargeRepo, eventBus, sseService);
 
       await useCase.execute(charge.id);
@@ -141,8 +143,8 @@ describe('ExpireChargeUseCase', () => {
     });
 
     it('emite evento SSE com tipo charge.expired', async () => {
-      const charge = criarCobrancaComStatus(ChargeStatus.PENDING);
-      const { chargeRepo, eventBus, sseService } = criarMocks(charge);
+      const charge = makeChargeWithStatus(ChargeStatus.PENDING);
+      const { chargeRepo, eventBus, sseService } = makeMocks(charge);
       const useCase = new ExpireChargeUseCase(chargeRepo, eventBus, sseService);
 
       await useCase.execute(charge.id);
@@ -154,8 +156,8 @@ describe('ExpireChargeUseCase', () => {
     });
 
     it('SSE carrega chargeId e status expired no payload', async () => {
-      const charge = criarCobrancaComStatus(ChargeStatus.PENDING);
-      const { chargeRepo, eventBus, sseService } = criarMocks(charge);
+      const charge = makeChargeWithStatus(ChargeStatus.PENDING);
+      const { chargeRepo, eventBus, sseService } = makeMocks(charge);
       const useCase = new ExpireChargeUseCase(chargeRepo, eventBus, sseService);
 
       await useCase.execute(charge.id);
@@ -172,8 +174,8 @@ describe('ExpireChargeUseCase', () => {
     });
 
     it('resolve sem retorno (void)', async () => {
-      const charge = criarCobrancaComStatus(ChargeStatus.PENDING);
-      const { chargeRepo, eventBus, sseService } = criarMocks(charge);
+      const charge = makeChargeWithStatus(ChargeStatus.PENDING);
+      const { chargeRepo, eventBus, sseService } = makeMocks(charge);
       const useCase = new ExpireChargeUseCase(chargeRepo, eventBus, sseService);
 
       await expect(useCase.execute(charge.id)).resolves.toBeUndefined();
