@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { AxiosResponse, InternalAxiosRequestConfig } from 'axios'
+import type { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 
 // Formato padrão de todas as respostas da API REST
 export interface ApiEnvelope<T> {
@@ -35,5 +35,29 @@ const http = axios.create({
 
 // Interceptor de request: adiciona JWT em todas as requisições autenticadas
 http.interceptors.request.use(applyJwtHeader)
+
+/**
+ * Interceptor de response: em 401, faz logout e redireciona para /login.
+ * Usa importação dinâmica para evitar dependência circular (http → auth.store → auth.service → http).
+ * Chamadas de login são ignoradas para evitar loop de redirecionamento.
+ */
+http.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    if (error.response?.status === 401) {
+      const url = error.config?.url ?? ''
+      const isLoginRequest = url.includes('/auth/login')
+      if (!isLoginRequest) {
+        void import('@/stores/auth.store').then(({ useAuthStore }) => {
+          useAuthStore().logout()
+        })
+        void import('@/router').then(({ default: router }) => {
+          void router.push('/login')
+        })
+      }
+    }
+    return Promise.reject(error)
+  },
+)
 
 export default http

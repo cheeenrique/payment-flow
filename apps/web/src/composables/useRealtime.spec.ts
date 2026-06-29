@@ -22,10 +22,15 @@ vi.mock('@/stores/sse-handlers', () => ({
   registerSseHandlers: vi.fn(),
 }))
 
+vi.mock('@/services/charges.service', () => ({
+  list: vi.fn(),
+}))
+
 import { apolloClient } from '@/services/apollo'
 import { fetchTimelinePage } from '@/services/timeline.service'
 import { createEventStream } from '@/streams/sse'
 import { registerSseHandlers } from '@/stores/sse-handlers'
+import { list as listCharges } from '@/services/charges.service'
 import { useTimelineStore } from '@/stores/timeline.store'
 import { useRealtime } from '@/composables/useRealtime'
 import { DASHBOARD_SUMMARY } from '@/graphql/dashboard.query'
@@ -90,6 +95,7 @@ describe('useRealtime', () => {
     vi.mocked(registerSseHandlers).mockReturnValue({})
     vi.mocked(apolloClient.query).mockResolvedValue({ data: { dashboard: mockSummary } })
     vi.mocked(fetchTimelinePage).mockResolvedValue({ total: 0, items: [] })
+    vi.mocked(listCharges).mockResolvedValue({ items: [], total: 0 })
   })
 
   afterEach(() => {

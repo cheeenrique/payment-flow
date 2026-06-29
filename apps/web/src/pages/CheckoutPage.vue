@@ -104,12 +104,15 @@ async function handleConfirm(): Promise<void> {
   submitting.value = true
   errorMessage.value = null
 
+  // Abre o stream antes do confirm para não perder o veredito SSE (race condition I5)
+  openStream()
+
   try {
     await confirm(token, selectedMethod.value)
     pageState.value = 'processing'
-    openStream()
   } catch (err) {
-    // 409 ou outro erro — mantém estado awaiting com mensagem
+    // confirm falhou — fecha stream e mantém estado awaiting com mensagem
+    closeStream()
     errorMessage.value =
       err instanceof Error ? err.message : 'Erro ao confirmar. Tente novamente.'
   } finally {
@@ -125,6 +128,11 @@ onMounted(async () => {
     switch (view.status) {
       case 'pending':
         pageState.value = 'awaiting'
+        break
+      case 'awaiting_payment':
+        // Cobrança já confirmada — aguarda veredito do PSP
+        pageState.value = 'processing'
+        openStream()
         break
       case 'paid':
         pageState.value = 'approved'

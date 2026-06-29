@@ -21,7 +21,7 @@ export const usePaymentsStore = defineStore('payments', () => {
   function upsert(item: Payment): void {
     const index = list.value.findIndex(p => p.id === item.id)
     if (index >= 0) {
-      list.value[index] = item
+      list.value[index] = { ...list.value[index], ...item }
     } else {
       list.value.push(item)
     }

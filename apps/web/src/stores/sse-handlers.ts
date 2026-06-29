@@ -44,6 +44,6 @@ export function registerSseHandlers(): EventHandlerMap {
     'notification.created': (payload: unknown) => notifications.prepend(payload as Notification),
 
     // Eventos de timeline
-    'timeline.event': (payload: unknown) => timeline.prepend(payload as TimelineEvent),
+    'timeline.event.recorded': (payload: unknown) => timeline.prepend(payload as TimelineEvent),
   }
 }

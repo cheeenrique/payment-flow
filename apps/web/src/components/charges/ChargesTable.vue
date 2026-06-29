@@ -38,7 +38,7 @@ const store = useChargesStore()
         :key="charge.id"
       >
         <!-- ID truncado nos primeiros 8 caracteres -->
-        <TableCell class="font-mono text-xs">{{ charge.id.slice(0, 8) }}</TableCell>
+        <TableCell class="font-mono text-xs">{{ charge.id?.slice(0, 8) ?? '—' }}</TableCell>
         <TableCell>{{ charge.customerId }}</TableCell>
         <TableCell>{{ formatCurrency(charge.amount) }}</TableCell>
         <TableCell>

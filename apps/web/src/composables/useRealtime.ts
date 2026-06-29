@@ -8,6 +8,8 @@ import type { SseEvent } from '@/streams/dispatcher'
 import { registerSseHandlers } from '@/stores/sse-handlers'
 import { useAuthStore } from '@/stores/auth.store'
 import { useTimelineStore } from '@/stores/timeline.store'
+import { useChargesStore } from '@/stores/charges.store'
+import { list as listCharges } from '@/services/charges.service'
 import type { TimelineEvent } from '@/types'
 
 /** Contadores por status de cobrança */
@@ -75,11 +77,14 @@ const DOMAIN_EVENT_TYPES = new Set([
  */
 function buildTimelineEntry(event: SseEvent): TimelineEvent {
   const payload = event.payload as Record<string, unknown>
-  const aggregateId = typeof payload?.id === 'string' ? payload.id : event.correlationId
+  // chargeId/paymentId/invoiceId are the canonical id fields in domain events
+  const chargeId = typeof payload?.['chargeId'] === 'string' ? payload['chargeId'] : undefined
+  const payloadId = typeof payload?.['id'] === 'string' ? payload['id'] : undefined
+  const aggregateId = chargeId ?? payloadId ?? ''
   const aggregateType = event.type.split('.')[0]
 
   return {
-    id: `${event.correlationId}-${event.type}`,
+    id: crypto.randomUUID(),
     eventType: event.type,
     aggregateId,
     aggregateType,
@@ -104,6 +109,7 @@ function buildTimelineEntry(event: SseEvent): TimelineEvent {
 export function useRealtime() {
   const authStore = useAuthStore()
   const timeline = useTimelineStore()
+  const charges = useChargesStore()
 
   const summary = ref<DashboardSummary | null>(null)
   const isLoading = ref(false)
@@ -116,18 +122,20 @@ export function useRealtime() {
     error.value = null
 
     try {
-      const [summaryResult, timelinePage] = await Promise.all([
+      const [summaryResult, timelinePage, chargesPage] = await Promise.all([
         apolloClient.query<DashboardQueryResult>({
           query: DASHBOARD_SUMMARY,
           fetchPolicy: 'network-only',
         }),
         fetchTimelinePage(TIMELINE_INITIAL_PAGE, TIMELINE_INITIAL_LIMIT),
+        listCharges(1, 50),
       ])
 
       if (summaryResult.data) {
         summary.value = summaryResult.data.dashboard
       }
       timeline.set(timelinePage.items)
+      charges.set(chargesPage.items)
     } catch (err) {
       error.value =
         err instanceof Error ? err.message : 'Erro ao carregar dados do dashboard'

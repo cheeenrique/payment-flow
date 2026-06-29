@@ -21,7 +21,7 @@ export const useChargesStore = defineStore('charges', () => {
   function upsert(item: Charge): void {
     const index = list.value.findIndex(c => c.id === item.id)
     if (index >= 0) {
-      list.value[index] = item
+      list.value[index] = { ...list.value[index], ...item }
     } else {
       list.value.push(item)
     }

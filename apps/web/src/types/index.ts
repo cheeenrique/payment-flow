@@ -1,5 +1,5 @@
 /** Status possíveis de uma cobrança */
-export type ChargeStatus = 'pending' | 'paid' | 'failed' | 'expired' | 'canceled'
+export type ChargeStatus = 'pending' | 'awaiting_payment' | 'paid' | 'failed' | 'expired' | 'canceled'
 
 /** Representa uma cobrança no domínio de pagamentos */
 export interface Charge {
