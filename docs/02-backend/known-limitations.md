@@ -50,12 +50,21 @@ Esforço médio; encaixa na arquitetura atual sem reescrita.
 
 ---
 
-## 3. Outros follow-ups de menor severidade
+## 3. Follow-ups RESOLVIDOS
 
-- **Refresh token automático no frontend:** o interceptor de resposta já desloga em 401 (`apps/web/src/services/http.ts`), mas não há renovação automática via refresh token — após expirar, o usuário refaz login. Suficiente para JWT short-lived; renovação transparente fica como melhoria.
-- **Carga inicial de payments no dashboard:** não há endpoint REST global `GET /payments` (pagamentos são consultados por charge). No dashboard, pagamentos chegam via SSE; uma listagem global inicial exigiria um endpoint/uso novo.
-- **Delays do simulador via `setTimeout`/agendamento:** vereditos com atraso são persistidos (`ScheduledVerdict`) e processados por cron (durável a restart). O delay imediato (pix) é inline. Não usa delayed-exchange do RabbitMQ — suficiente para o objetivo didático.
-- **Reconnect do SSE no checkout:** usa delay fixo; o stream do dashboard usa backoff exponencial. Unificar num util compartilhado é um polish pendente.
+Itens que eram pendências e foram corrigidos (branch chore/followups):
+
+- ~~Refresh token automático no frontend~~ — interceptor 401 agora tenta `POST /auth/refresh` e retenta a request; desloga só se o refresh falhar.
+- ~~Carga inicial de payments no dashboard~~ — endpoint `GET /payments?page&limit` (paginado, `payments:read`) criado; dashboard carrega via REST.
+- ~~Reconnect do SSE no checkout~~ — backoff unificado num helper compartilhado (`@/streams/reconnect`).
+- Checkout summary, sidebar active-class, toast, DRY de stores, tipos union — também resolvidos.
+
+## 4. Pequenas dívidas remanescentes (baixa severidade)
+
+- **Delays do simulador via `setTimeout`/cron:** vereditos com atraso são persistidos (`ScheduledVerdict`) e processados por cron (durável a restart); delay imediato (pix) é inline. Não usa delayed-exchange do RabbitMQ — suficiente para o objetivo didático.
+- **`PublicChargeView.status` ainda `string`** (enquanto `ConfirmPaymentLinkOutput.status` é `ChargeStatus`) — tipar como `ChargeStatus` por consistência.
+- **`MethodSelector` emite `string`** e `availableMethods` é `string[]` — o checkout faz `as PaymentMethod`; estreitar exigiria ajustar o contrato da view pública.
+- **Testes e2e/integração** (com Mongo+Rabbit reais) ainda não automatizados — combinado para o fim do projeto. Hoje há 290 (api) + 73 (web) testes unitários + smokes manuais validados.
 
 ---
 
