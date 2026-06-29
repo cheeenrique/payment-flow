@@ -1,6 +1,6 @@
 import http, { unwrap } from '@/services/http'
 import type { ApiEnvelope } from '@/services/http'
-import type { CheckoutView } from '@/types'
+import type { CheckoutView, PaymentMethod } from '@/types'
 import type { AxiosResponse } from 'axios'
 
 /**
@@ -16,7 +16,7 @@ export async function getByToken(token: string): Promise<CheckoutView> {
  * Confirma o método de pagamento escolhido — POST /pay/:token/confirm
  * Retorna void; descarta o envelope da API.
  */
-export async function confirm(token: string, method: string): Promise<void> {
+export async function confirm(token: string, method: PaymentMethod): Promise<void> {
   const res: AxiosResponse<ApiEnvelope<unknown>> = await http.post(`/pay/${token}/confirm`, {
     method,
   })

@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import type { ChargeStatus, PaymentStatus, InvoiceStatus, NotificationType } from '@/types'
 
 // Mapeamento de status para grupo de cor
 const STATUS_GREEN = ['paid', 'approved', 'issued'] as const
 const STATUS_YELLOW = ['pending', 'processing', 'requested', 'awaiting_payment'] as const
 const STATUS_RED = ['failed', 'expired', 'canceled'] as const
 
+export type BadgeStatus = ChargeStatus | PaymentStatus | InvoiceStatus | NotificationType
+
 const props = defineProps<{
-  status: string
+  status: BadgeStatus
 }>()
 
 // Retorna as classes Tailwind correspondentes ao status recebido

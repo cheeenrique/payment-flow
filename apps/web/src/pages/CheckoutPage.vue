@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getByToken, confirm, streamUrl } from '@/services/checkout.service'
-import type { CheckoutView } from '@/types'
+import type { CheckoutView, PaymentMethod } from '@/types'
 import { createReconnect } from '@/streams/reconnect'
 import type { ReconnectHandle } from '@/streams/reconnect'
 import { Button } from '@/components/ui/button'
@@ -118,7 +118,7 @@ async function handleConfirm(): Promise<void> {
   openStream()
 
   try {
-    await confirm(token, selectedMethod.value)
+    await confirm(token, selectedMethod.value as PaymentMethod)
     pageState.value = 'processing'
   } catch (err) {
     // confirm falhou — fecha stream e mantém estado awaiting com mensagem
