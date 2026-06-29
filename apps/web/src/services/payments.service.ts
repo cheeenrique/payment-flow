@@ -2,7 +2,7 @@ import http from '@/services/http'
 import type { AxiosResponse } from 'axios'
 import type { Payment } from '@/types'
 
-/** Envelope de paginação retornado em GET /charges/:chargeId/payments */
+/** Envelope de paginação */
 interface PaginationMeta {
   total: number
   page: number
@@ -22,8 +22,23 @@ interface PaymentsListResult {
 }
 
 /**
+ * Busca pagamentos paginados — GET /payments?page=&limit=
+ * RBAC: payments:read
+ */
+export async function list(page: number, limit: number): Promise<PaymentsListResult> {
+  const res: AxiosResponse<{ data: Payment[]; meta: PaymentsListMeta }> = await http.get(
+    '/payments',
+    { params: { page, limit } },
+  )
+
+  return {
+    items: res.data.data,
+    total: res.data.meta.pagination.total,
+  }
+}
+
+/**
  * Busca pagamentos paginados de uma cobrança — GET /charges/:chargeId/payments?page=&limit=
- * Não usa unwrap pois precisa de res.data.meta.pagination.total além de res.data.data
  */
 export async function listByCharge(
   chargeId: string,

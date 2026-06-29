@@ -9,7 +9,9 @@ import { registerSseHandlers } from '@/stores/sse-handlers'
 import { useAuthStore } from '@/stores/auth.store'
 import { useTimelineStore } from '@/stores/timeline.store'
 import { useChargesStore } from '@/stores/charges.store'
+import { usePaymentsStore } from '@/stores/payments.store'
 import { list as listCharges } from '@/services/charges.service'
+import { list as listPayments } from '@/services/payments.service'
 import type { TimelineEvent } from '@/types'
 
 /** Contadores por status de cobrança */
@@ -56,6 +58,8 @@ interface DashboardQueryResult {
 
 const TIMELINE_INITIAL_PAGE = 1
 const TIMELINE_INITIAL_LIMIT = 20
+const LIST_INITIAL_PAGE = 1
+const LIST_INITIAL_LIMIT = 50
 
 /** Tipos de evento de domínio que geram entradas na timeline em tempo real */
 const DOMAIN_EVENT_TYPES = new Set([
@@ -72,12 +76,9 @@ const DOMAIN_EVENT_TYPES = new Set([
 
 /**
  * Constrói uma entrada de TimelineEvent a partir de um evento SSE de domínio.
- * O `aggregateId` é lido do campo `id` do payload; o `aggregateType` é derivado
- * do prefixo do tipo de evento (ex: "charge.created" → "charge").
  */
 function buildTimelineEntry(event: SseEvent): TimelineEvent {
   const payload = event.payload as Record<string, unknown>
-  // chargeId/paymentId/invoiceId are the canonical id fields in domain events
   const chargeId = typeof payload?.['chargeId'] === 'string' ? payload['chargeId'] : undefined
   const payloadId = typeof payload?.['id'] === 'string' ? payload['id'] : undefined
   const aggregateId = chargeId ?? payloadId ?? ''
@@ -95,21 +96,12 @@ function buildTimelineEntry(event: SseEvent): TimelineEvent {
 
 /**
  * Composable de orquestração do dashboard em tempo real.
- *
- * No `onMounted`:
- *   1. Busca DASHBOARD_SUMMARY via GraphQL e timeline inicial via REST em paralelo.
- *   2. Abre conexão SSE autenticada com handler composto:
- *      - eventos de entidade roteados para stores via `registerSseHandlers`
- *      - eventos de domínio também constroem entradas de timeline via interceptor
- *
- * No `onUnmounted`: fecha o handle SSE.
- *
- * Retorna: `{ summary, isLoading, error }`.
  */
 export function useRealtime() {
   const authStore = useAuthStore()
   const timeline = useTimelineStore()
   const charges = useChargesStore()
+  const payments = usePaymentsStore()
 
   const summary = ref<DashboardSummary | null>(null)
   const isLoading = ref(false)
@@ -122,13 +114,14 @@ export function useRealtime() {
     error.value = null
 
     try {
-      const [summaryResult, timelinePage, chargesPage] = await Promise.all([
+      const [summaryResult, timelinePage, chargesPage, paymentsPage] = await Promise.all([
         apolloClient.query<DashboardQueryResult>({
           query: DASHBOARD_SUMMARY,
           fetchPolicy: 'network-only',
         }),
         fetchTimelinePage(TIMELINE_INITIAL_PAGE, TIMELINE_INITIAL_LIMIT),
-        listCharges(1, 50),
+        listCharges(LIST_INITIAL_PAGE, LIST_INITIAL_LIMIT),
+        listPayments(LIST_INITIAL_PAGE, LIST_INITIAL_LIMIT),
       ])
 
       if (summaryResult.data) {
@@ -136,6 +129,7 @@ export function useRealtime() {
       }
       timeline.set(timelinePage.items)
       charges.set(chargesPage.items)
+      payments.set(paymentsPage.items)
     } catch (err) {
       error.value =
         err instanceof Error ? err.message : 'Erro ao carregar dados do dashboard'
