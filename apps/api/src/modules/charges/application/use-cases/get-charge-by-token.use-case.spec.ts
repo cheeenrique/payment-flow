@@ -150,6 +150,44 @@ describe('GetChargeByTokenUseCase', () => {
     });
   });
 
+  describe('cobrança com paymentMethod pré-definido', () => {
+    it('availableMethods contém apenas o método já definido', async () => {
+      const charge = new Charge({
+        id: 'charge-internal-uuid',
+        customerId: 'customer-internal-uuid',
+        amount: 25000,
+        currency: 'BRL',
+        description: 'Mensalidade de serviço',
+        status: ChargeStatus.AWAITING_PAYMENT,
+        paymentLinkToken: 'aaaaaaaabbbbbbbbcccccccc00000002',
+        paymentMethod: PaymentMethod.PIX,
+        expiresAt: new Date(Date.now() + 3600_000),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      const chargeRepo = makeChargeRepo(charge);
+      const useCase = new GetChargeByTokenUseCase(chargeRepo);
+
+      const view = await useCase.execute('aaaaaaaabbbbbbbbcccccccc00000002');
+
+      expect(view.availableMethods).toEqual([PaymentMethod.PIX]);
+      expect(view.availableMethods).toHaveLength(1);
+    });
+
+    it('availableMethods é cópia independente (não a referência do módulo)', async () => {
+      const charge = makeCharge();
+      const chargeRepo = makeChargeRepo(charge);
+      const useCase = new GetChargeByTokenUseCase(chargeRepo);
+
+      const view = await useCase.execute('aaaaaaaabbbbbbbbcccccccc00000001');
+
+      // Mutar o array retornado não deve afetar chamadas futuras
+      view.availableMethods.length = 0;
+      const view2 = await useCase.execute('aaaaaaaabbbbbbbbcccccccc00000001');
+      expect(view2.availableMethods).toHaveLength(3);
+    });
+  });
+
   describe('token não encontrado', () => {
     it('lança ChargeNotFoundError quando findByPaymentLinkToken retorna null', async () => {
       const chargeRepo = makeChargeRepo(null);

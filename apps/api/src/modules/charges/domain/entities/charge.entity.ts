@@ -207,7 +207,7 @@ export class Charge {
         { chargeId: this.id, currentStatus: this.status },
       );
     }
-    if (this.paymentMethod !== null) {
+    if (this.paymentMethod !== null && this.paymentMethod !== method) {
       throw new ConflictError(
         `Transição inválida: cobrança já possui método de pagamento definido como "${this.paymentMethod}"`,
         undefined,

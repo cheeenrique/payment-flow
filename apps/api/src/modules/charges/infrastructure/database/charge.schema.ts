@@ -52,5 +52,3 @@ export const ChargeSchema = SchemaFactory.createForClass(ChargeModel);
 
 // Índice composto para o scheduler de expiração: busca status abertos com expiresAt vencido
 ChargeSchema.index({ status: 1, expiresAt: 1 });
-// Índice único para lookup de cobranças via link de pagamento
-ChargeSchema.index({ paymentLinkToken: 1 }, { unique: true });

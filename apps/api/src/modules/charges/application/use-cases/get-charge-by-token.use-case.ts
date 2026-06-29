@@ -38,12 +38,16 @@ export class GetChargeByTokenUseCase {
       throw new ChargeNotFoundError(token);
     }
 
+    const availableMethods = charge.paymentMethod !== null
+      ? [charge.paymentMethod]
+      : [...SUPPORTED_PAYMENT_METHODS];
+
     return {
       amount: charge.amount,
       currency: charge.currency,
       description: charge.description,
       status: charge.status,
-      availableMethods: SUPPORTED_PAYMENT_METHODS,
+      availableMethods,
     };
   }
 }

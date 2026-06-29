@@ -344,6 +344,20 @@ describe('Charge.selectMethodAndRequestPayment', () => {
     expect(() => charge.selectMethodAndRequestPayment(PaymentMethod.PIX)).toThrow(ConflictError);
   });
 
+  it('sucesso: método igual ao já definido → re-confirma sem erro (idempotente)', () => {
+    const charge = new Charge({
+      ...baseProps,
+      id: 'charge-id',
+      status: ChargeStatus.AWAITING_PAYMENT,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    // baseProps.paymentMethod = PaymentMethod.PIX; re-confirmar com mesmo método deve funcionar
+    const result = charge.selectMethodAndRequestPayment(PaymentMethod.PIX);
+    expect(result.paymentMethod).toBe(PaymentMethod.PIX);
+    expect(result.status).toBe(ChargeStatus.AWAITING_PAYMENT);
+  });
+
   it('guarda já definido: método já definido lança ConflictError', () => {
     const charge = new Charge({
       ...baseProps,
