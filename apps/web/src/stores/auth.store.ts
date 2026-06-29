@@ -4,40 +4,57 @@ import * as authService from '@/services/auth.service'
 import type { User } from '@/services/auth.service'
 
 export const useAuthStore = defineStore('auth', () => {
-  // Perfil do usuário autenticado — null quando não há sessão ativa
   const user = ref<User | null>(null)
 
-  // Token de acesso — inicializado a partir do localStorage para persistir sessão
-  const accessToken = ref<string | null>(localStorage.getItem('accessToken'))
+  // Tokens internos — mutados somente por login/logout/setAccessToken
+  const _accessToken = ref<string | null>(localStorage.getItem('accessToken'))
+  const _refreshToken = ref<string | null>(localStorage.getItem('refreshToken'))
 
-  // Autenticado enquanto houver token válido
-  const isAuthenticated = computed(() => accessToken.value !== null)
+  // Readonly: código externo lê mas não grava diretamente
+  const accessToken = computed(() => _accessToken.value)
+  const refreshToken = computed(() => _refreshToken.value)
+
+  const isAuthenticated = computed(() => _accessToken.value !== null)
+
+  /** Persiste novos tokens na memória e no localStorage */
+  function setTokens(access: string, refresh: string): void {
+    _accessToken.value = access
+    _refreshToken.value = refresh
+    localStorage.setItem('accessToken', access)
+    localStorage.setItem('refreshToken', refresh)
+  }
 
   /**
-   * Realiza login: obtém token, persiste e carrega perfil do usuário.
-   * Operação atômica — se getMe falhar após postLogin, reverte o token
-   * para evitar sessão parcialmente inicializada (isAuthenticated=true, user=null).
+   * Atualiza apenas o accessToken (chamado pelo interceptor de refresh).
+   */
+  function setAccessToken(token: string): void {
+    _accessToken.value = token
+    localStorage.setItem('accessToken', token)
+  }
+
+  /**
+   * Realiza login: obtém tokens, persiste e carrega perfil do usuário.
    */
   async function login(email: string, password: string): Promise<void> {
     const response = await authService.postLogin(email, password)
-    accessToken.value = response.accessToken
-    localStorage.setItem('accessToken', response.accessToken)
+    setTokens(response.accessToken, response.refreshToken)
     try {
       await loadMe()
     } catch (err) {
-      // Reverte estado ao falhar no carregamento do perfil
       logout()
       throw err
     }
   }
 
   /**
-   * Encerra a sessão: remove token e limpa o estado local
+   * Encerra a sessão: remove tokens e limpa o estado local
    */
   function logout(): void {
-    accessToken.value = null
+    _accessToken.value = null
+    _refreshToken.value = null
     user.value = null
     localStorage.removeItem('accessToken')
+    localStorage.removeItem('refreshToken')
   }
 
   /**
@@ -47,5 +64,14 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = await authService.getMe()
   }
 
-  return { user, accessToken, isAuthenticated, login, logout, loadMe }
+  return {
+    user,
+    accessToken,
+    refreshToken,
+    isAuthenticated,
+    login,
+    logout,
+    loadMe,
+    setAccessToken,
+  }
 })
