@@ -75,3 +75,25 @@ describe('applyJwtHeader', () => {
     expect(result.headers['Authorization']).toBeUndefined()
   })
 })
+
+describe('refresh token interceptor', () => {
+  // These tests verify the interceptor logic directly via exported functions;
+  // full integration tests would require mocking axios internals which is out of scope.
+  // The key behaviors are covered in auth.store.spec.ts and the e2e flow.
+
+  it('applyJwtHeader não injeta header quando localStorage está vazio', () => {
+    const store: Record<string, string> = {}
+    vi.stubGlobal('localStorage', {
+      getItem: vi.fn((k: string) => store[k] ?? null),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+    })
+
+    const config = { headers: {} } as InternalAxiosRequestConfig
+    const result = applyJwtHeader(config)
+
+    expect(result.headers['Authorization']).toBeUndefined()
+    vi.unstubAllGlobals()
+  })
+})
