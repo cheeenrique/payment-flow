@@ -27,4 +27,6 @@ export interface IPaymentRepository {
    * Somente statuses com documentos existentes aparecem no mapa retornado.
    */
   countByStatus(): Promise<Record<string, number>>;
+  /** Retorna todos os pagamentos paginados, ordenados por mais recentes */
+  findMany(page: number, limit: number): Promise<{ items: Payment[]; total: number }>;
 }
