@@ -11,7 +11,7 @@ export interface EventStreamHandle {
  * Abre uma conexão SSE autenticada com o backend.
  *
  * - URL: `${VITE_API_URL}/events/stream?token=<jwt>`
- * - Em caso de erro, reconecta com backoff exponencial (1s → 10s)
+ * - Em caso de erro, reconecta com backoff linear (1s → 10s)
  * - `close()` cancela qualquer timer de reconexão pendente
  */
 export function createEventStream(

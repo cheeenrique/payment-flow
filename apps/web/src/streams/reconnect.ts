@@ -1,4 +1,4 @@
-/** Opções para o helper de reconnect com backoff exponencial */
+/** Opções para o helper de reconnect com backoff linear */
 export interface ReconnectOptions {
   /** Delay base em ms (default: 1000) */
   baseMs?: number
@@ -8,7 +8,7 @@ export interface ReconnectOptions {
 
 /** Retorno de `createReconnect` */
 export interface ReconnectHandle {
-  /** Agenda o callback com delay exponencial baseado nas tentativas anteriores */
+  /** Agenda o callback com delay linear baseado nas tentativas anteriores */
   schedule: (callback: () => void) => void
   /** Cancela qualquer timer pendente e reseta o contador de tentativas */
   cancel: () => void
@@ -17,7 +17,7 @@ export interface ReconnectHandle {
 }
 
 /**
- * Cria um helper de reconnect com backoff exponencial.
+ * Cria um helper de reconnect com backoff linear.
  * O delay cresce linearmente por tentativa até `maxMs`:
  * `min(baseMs * attempt, maxMs)`.
  *

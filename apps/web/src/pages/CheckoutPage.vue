@@ -87,6 +87,11 @@ function openStream(): void {
   const url = streamUrl(token)
   eventSource = new EventSource(url)
 
+  // Reseta o contador de tentativas ao reconectar com sucesso
+  eventSource.onopen = (): void => {
+    reconnect.reset()
+  }
+
   eventSource.onmessage = (event: MessageEvent): void => {
     try {
       const data = JSON.parse(event.data as string) as { type: string }

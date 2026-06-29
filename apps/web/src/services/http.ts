@@ -38,10 +38,24 @@ http.interceptors.request.use(applyJwtHeader)
 
 // Controla se já há um refresh em andamento (evita chamadas paralelas duplicadas)
 let isRefreshing = false
-let pendingRetry: Array<(token: string) => void> = []
 
+/** Cada entrada guarda tanto o callback de retry quanto o reject da promise pendente */
+interface PendingEntry {
+  retry: (token: string) => void
+  fail: (err: unknown) => void
+}
+
+let pendingRetry: Array<PendingEntry> = []
+
+/** Retenta todas as requisições enfileiradas com o novo token e esvazia a fila */
 function drainPending(token: string): void {
-  pendingRetry.forEach((cb) => cb(token))
+  pendingRetry.forEach((entry) => entry.retry(token))
+  pendingRetry = []
+}
+
+/** Rejeita todas as requisições enfileiradas com o erro recebido e esvazia a fila */
+function rejectPending(err: unknown): void {
+  pendingRetry.forEach((entry) => entry.fail(err))
   pendingRetry = []
 }
 
@@ -72,10 +86,13 @@ http.interceptors.response.use(
 
     if (isRefreshing) {
       return new Promise((resolve, reject) => {
-        pendingRetry.push((token) => {
-          originalConfig._retry = true
-          originalConfig.headers['Authorization'] = `Bearer ${token}`
-          http.request(originalConfig).then(resolve).catch(reject)
+        pendingRetry.push({
+          retry: (token) => {
+            originalConfig._retry = true
+            originalConfig.headers['Authorization'] = `Bearer ${token}`
+            http.request(originalConfig).then(resolve).catch(reject)
+          },
+          fail: reject,
         })
       })
     }
@@ -101,6 +118,8 @@ http.interceptors.response.use(
       originalConfig.headers['Authorization'] = `Bearer ${accessToken}`
       return http.request(originalConfig)
     } catch {
+      // Rejeita todas as requisições enfileiradas antes de fazer logout
+      rejectPending(error)
       const { useAuthStore } = await import('@/stores/auth.store')
       useAuthStore().logout()
       const { default: router } = await import('@/router')

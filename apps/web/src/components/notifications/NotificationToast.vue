@@ -46,7 +46,6 @@ function handleDismiss(): void {
 <template>
   <div
     :class="['flex items-start gap-3 w-80 rounded-lg border p-4 shadow-md', cardClass]"
-    role="alert"
   >
     <component :is="icon" :class="['h-5 w-5 shrink-0 mt-0.5', iconClass]" aria-hidden="true" />
 
