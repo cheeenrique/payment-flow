@@ -44,19 +44,31 @@ function handleSseEvent(eventType: string): void {
   switch (eventType) {
     case 'payment.processing':
       pageState.value = 'processing'
+      if (checkoutView.value) {
+        checkoutView.value = { ...checkoutView.value, status: 'awaiting_payment' }
+      }
       break
     case 'payment.approved':
     case 'charge.paid':
       pageState.value = 'approved'
+      if (checkoutView.value) {
+        checkoutView.value = { ...checkoutView.value, status: 'paid' }
+      }
       closeStream()
       break
     case 'payment.failed':
     case 'charge.failed':
       pageState.value = 'failed'
+      if (checkoutView.value) {
+        checkoutView.value = { ...checkoutView.value, status: 'failed' }
+      }
       closeStream()
       break
     case 'charge.expired':
       pageState.value = 'expired'
+      if (checkoutView.value) {
+        checkoutView.value = { ...checkoutView.value, status: 'expired' }
+      }
       closeStream()
       break
   }
