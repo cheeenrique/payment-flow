@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { PaymentMethod } from '@/modules/charges/domain/entities/charge.entity';
+import { PaymentMethod, ChargeStatus } from '@/modules/charges/domain/entities/charge.entity';
 import type { IChargeRepository } from '@/modules/charges/domain/repositories/charge-repository.interface';
 import { ChargeNotFoundError } from '@/modules/charges/domain/errors/charge-not-found.error';
 import { CHARGE_REPOSITORY } from '@/modules/charges/charges.tokens';
@@ -9,7 +9,7 @@ export interface PublicChargeView {
   amount: number;
   currency: string;
   description?: string;
-  status: string;
+  status: ChargeStatus;
   availableMethods: PaymentMethod[];
 }
 
@@ -37,7 +37,8 @@ export class GetChargeByTokenUseCase {
       throw new ChargeNotFoundError(token);
     }
 
-    const availableMethods = charge.paymentMethod !== null
+    // método pré-definido restringe as opções; senão, oferece todos
+    const availableMethods = charge.paymentMethod != null
       ? [charge.paymentMethod]
       : [...SUPPORTED_PAYMENT_METHODS];
 
