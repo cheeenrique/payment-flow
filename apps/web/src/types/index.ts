@@ -10,6 +10,8 @@ export interface Charge {
   customerId: string
   createdAt: string
   updatedAt: string
+  /** Token usado para montar o link público de pagamento */
+  paymentLinkToken?: string
 }
 
 /** Status possíveis de um pagamento */
