@@ -13,9 +13,8 @@ const RECONNECT_BASE_MS = 1_000
  * Abre uma conexão SSE autenticada com o backend.
  *
  * - URL: `${VITE_API_URL}/events/stream?token=<jwt>`
- * - Cada mensagem é deserializada e despachada via `dispatch`
- * - Em caso de erro, a conexão é fechada e reconectada com backoff exponencial
- *   limitado a `min(1000 * attempts, 10000)` ms
+ * - Em caso de erro, reconecta com backoff exponencial até `RECONNECT_MAX_MS`
+ * - `close()` cancela qualquer timer de reconexão pendente
  */
 export function createEventStream(
   token: string,
@@ -26,6 +25,7 @@ export function createEventStream(
   let attempts = 0
   let source: EventSource | null = null
   let closed = false
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 
   function connect(): void {
     if (closed) return
@@ -51,11 +51,10 @@ export function createEventStream(
 
       attempts += 1
       const delay = Math.min(RECONNECT_BASE_MS * attempts, RECONNECT_MAX_MS)
-      setTimeout(connect, delay)
+      reconnectTimer = setTimeout(connect, delay)
     }
 
     source.onopen = (): void => {
-      // Reconectou com sucesso — reseta contador de tentativas
       attempts = 0
     }
   }
@@ -65,6 +64,10 @@ export function createEventStream(
   return {
     close(): void {
       closed = true
+      if (reconnectTimer !== null) {
+        clearTimeout(reconnectTimer)
+        reconnectTimer = null
+      }
       source?.close()
       source = null
     },
