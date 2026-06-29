@@ -11,6 +11,7 @@ import { CreatePaymentUseCase } from './application/use-cases/create-payment.use
 import { ProcessPaymentUseCase } from './application/use-cases/process-payment.use-case';
 import { FindPaymentUseCase } from './application/use-cases/find-payment.use-case';
 import { FindPaymentsByChargeUseCase } from './application/use-cases/find-payments-by-charge.use-case';
+import { ListPaymentsUseCase } from './application/use-cases/list-payments.use-case';
 
 import { PaymentsController } from './presentation/http/payments.controller';
 import { PaymentsResolver } from './presentation/graphql/payments.resolver';
@@ -51,6 +52,7 @@ import { PAYMENT_REPOSITORY } from './payments.tokens';
     ProcessPaymentUseCase,
     FindPaymentUseCase,
     FindPaymentsByChargeUseCase,
+    ListPaymentsUseCase,
 
     // GraphQL resolver — query-side
     PaymentsResolver,
