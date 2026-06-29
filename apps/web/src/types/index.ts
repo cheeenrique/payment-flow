@@ -17,6 +17,9 @@ export interface Charge {
 /** Status possíveis de um pagamento */
 export type PaymentStatus = 'processing' | 'approved' | 'failed'
 
+/** Métodos de pagamento suportados */
+export type PaymentMethod = 'pix' | 'boleto' | 'credit_card'
+
 /** Representa um pagamento associado a uma cobrança */
 export interface Payment {
   id: string
@@ -24,7 +27,7 @@ export interface Payment {
   status: PaymentStatus
   amount: number
   currency: string
-  method: string
+  method: PaymentMethod
   createdAt: string
   updatedAt: string
 }
@@ -87,5 +90,4 @@ export interface CheckoutView {
   description?: string
   status: ChargeStatus
   availableMethods: string[]
-  customerName?: string
 }
