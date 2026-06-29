@@ -61,10 +61,10 @@ Itens que eram pendências e foram corrigidos (branch chore/followups):
 
 ## 4. Pequenas dívidas remanescentes (baixa severidade)
 
-- **Delays do simulador via `setTimeout`/cron:** vereditos com atraso são persistidos (`ScheduledVerdict`) e processados por cron (durável a restart); delay imediato (pix) é inline. Não usa delayed-exchange do RabbitMQ — suficiente para o objetivo didático.
-- **`PublicChargeView.status` ainda `string`** (enquanto `ConfirmPaymentLinkOutput.status` é `ChargeStatus`) — tipar como `ChargeStatus` por consistência.
-- **`MethodSelector` emite `string`** e `availableMethods` é `string[]` — o checkout faz `as PaymentMethod`; estreitar exigiria ajustar o contrato da view pública.
+- **Delays do simulador via `setTimeout`/cron:** vereditos com atraso são persistidos (`ScheduledVerdict`) e processados por cron (durável a restart); delay imediato (pix) é inline. Não usa delayed-exchange do RabbitMQ — suficiente para o objetivo didático. (Decisão consciente, não dívida.)
 - **Testes e2e/integração** (com Mongo+Rabbit reais) ainda não automatizados — combinado para o fim do projeto. Hoje há 290 (api) + 73 (web) testes unitários + smokes manuais validados.
+
+> Dívidas de tipagem resolvidas: `PublicChargeView.status` agora é `ChargeStatus`; `availableMethods`/`MethodSelector` usam o union `PaymentMethod` (sem cast).
 
 ---
 
