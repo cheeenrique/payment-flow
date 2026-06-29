@@ -1,24 +1,25 @@
 <script setup lang="ts">
 import { CreditCard, QrCode, FileText } from '@lucide/vue'
+import type { PaymentMethod } from '@/types'
 
 defineProps<{
-  methods: string[]
-  modelValue: string
+  methods: PaymentMethod[]
+  modelValue: PaymentMethod | ''
 }>()
 
 const emit = defineEmits<{
-  'update:modelValue': [method: string]
+  'update:modelValue': [method: PaymentMethod]
 }>()
 
-type MethodConfig = { label: string; icon: typeof CreditCard; id: string }
+type MethodConfig = { label: string; icon: typeof CreditCard; id: PaymentMethod }
 
-const METHOD_CONFIG: Record<string, MethodConfig> = {
+const METHOD_CONFIG: Record<PaymentMethod, MethodConfig> = {
   pix: { id: 'pix', label: 'PIX', icon: QrCode },
   boleto: { id: 'boleto', label: 'Boleto', icon: FileText },
   credit_card: { id: 'credit_card', label: 'Cartão de Crédito', icon: CreditCard },
 }
 
-function select(method: string): void {
+function select(method: PaymentMethod): void {
   emit('update:modelValue', method)
 }
 </script>

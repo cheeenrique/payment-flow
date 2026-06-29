@@ -89,5 +89,5 @@ export interface CheckoutView {
   currency: string
   description?: string
   status: ChargeStatus
-  availableMethods: string[]
+  availableMethods: PaymentMethod[]
 }

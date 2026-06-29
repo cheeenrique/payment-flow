@@ -30,7 +30,7 @@ const token = route.params['token'] as string
 
 const pageState = ref<CheckoutPageState>('loading')
 const checkoutView = ref<CheckoutView | null>(null)
-const selectedMethod = ref<string>('')
+const selectedMethod = ref<PaymentMethod | ''>('')
 const errorMessage = ref<string | null>(null)
 const submitting = ref(false)
 
@@ -114,7 +114,9 @@ function openStream(): void {
 }
 
 async function handleConfirm(): Promise<void> {
-  if (!selectedMethod.value || submitting.value) return
+  // narrowing: descarta '' (falsy) → method é PaymentMethod sem cast
+  const method = selectedMethod.value
+  if (!method || submitting.value) return
 
   submitting.value = true
   errorMessage.value = null
@@ -123,7 +125,7 @@ async function handleConfirm(): Promise<void> {
   openStream()
 
   try {
-    await confirm(token, selectedMethod.value as PaymentMethod)
+    await confirm(token, method)
     pageState.value = 'processing'
   } catch (err) {
     // confirm falhou — fecha stream e mantém estado awaiting com mensagem
