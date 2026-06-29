@@ -18,10 +18,7 @@ const formattedAmount = computed(() => formatCurrency(props.view.amount))
         {{ view.description }}
       </p>
     </CardHeader>
-    <CardContent class="flex items-center justify-between">
-      <span v-if="view.customerName" class="text-sm text-muted-foreground">
-        Para: {{ view.customerName }}
-      </span>
+    <CardContent>
       <StatusBadge :status="view.status" />
     </CardContent>
   </Card>
