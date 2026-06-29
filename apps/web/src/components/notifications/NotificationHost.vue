@@ -6,9 +6,6 @@ import type { Notification } from '@/types'
 
 const DISMISS_TIMEOUT_MS = 5_000
 
-const MOTION_INITIAL = { opacity: 0, x: 40 } as const
-const MOTION_ENTER = { opacity: 1, x: 0, transition: { duration: 300 } } as const
-
 const store = useNotificationsStore()
 const activeToasts = ref<Notification[]>([])
 const seenIds = new Set<string>()
@@ -52,15 +49,12 @@ function dismiss(id: string): void {
       aria-live="polite"
       aria-label="Notificações"
     >
-      <div
+      <NotificationToast
         v-for="toast in activeToasts"
         :key="toast.id"
-        v-motion
-        :initial="MOTION_INITIAL"
-        :enter="MOTION_ENTER"
-      >
-        <NotificationToast :notification="toast" @dismiss="dismiss" />
-      </div>
+        :notification="toast"
+        @dismiss="dismiss"
+      />
     </TransitionGroup>
   </Teleport>
 </template>
