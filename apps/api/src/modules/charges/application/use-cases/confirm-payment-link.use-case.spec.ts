@@ -147,6 +147,17 @@ describe('ConfirmPaymentLinkUseCase', () => {
       ).rejects.toThrow(ConflictError);
     });
 
+    it('lança ConflictError quando cobrança está com falha (FAILED)', async () => {
+      const { chargeRepo, eventBus } = makeMocks();
+      const charge = makeTerminalCharge(ChargeStatus.FAILED);
+      chargeRepo.findByPaymentLinkToken.mockResolvedValue(charge);
+      const useCase = new ConfirmPaymentLinkUseCase(chargeRepo, eventBus);
+
+      await expect(
+        useCase.execute({ token: charge.paymentLinkToken, method: PaymentMethod.PIX }),
+      ).rejects.toThrow(ConflictError);
+    });
+
     it('não persiste nem emite evento quando cobrança é terminal', async () => {
       const { chargeRepo, eventBus } = makeMocks();
       const charge = makeTerminalCharge(ChargeStatus.EXPIRED);
